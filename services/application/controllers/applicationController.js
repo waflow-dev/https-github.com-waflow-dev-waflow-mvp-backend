@@ -37,6 +37,21 @@ export const autoApproveStepsIfDocsValid = async (customerId) => {
   }
 };
 
+// Helper: auto-update global status
+const calculateApplicationStatus = (steps) => {
+  const total = steps.length;
+  const approved = steps.filter((s) => s.status === "Approved").length;
+  const started = steps.some((s) => s.status === "Started");
+  const declined = steps.some((s) => s.status === "Declined");
+
+  if (declined) return "Rejected";
+  if (approved === total) return "Completed";
+  if (started) return "In Progress";
+  if (steps.every((s) => s.status === "Not Started"))
+    return "Ready for Processing";
+  return "Waiting for Agent Review";
+};
+
 // Controller: Create new application
 export const createApplication = async (req, res) => {
   const { customerId, assignedAgentId } = req.body;
@@ -81,22 +96,6 @@ export const createApplication = async (req, res) => {
       error: err.message,
     });
   }
-};
-
-// Helper: auto-update global status
-const calculateApplicationStatus = (steps) => {
-  const total = steps.length;
-  const approved = steps.filter((s) => s.status === "Approved").length;
-  const started = steps.some((s) => s.status === "Started");
-  const declined = steps.some((s) => s.status === "Declined");
-
-  if (declined) return "Rejected";
-  if (approved === total) return "Completed";
-  if (started) return "In Progress";
-  if (steps.every((s) => s.status === "Not Started"))
-    return "Ready for Processing";
-
-  return "Waiting for Agent Review";
 };
 
 // PATCH: update step status
@@ -192,54 +191,34 @@ export const updateVisaSubStep = async (req, res) => {
     );
     if (!member) return res.status(404).json({ message: "Member not found" });
 
-    const normalize = subStepName.toLowerCase().replace(/\s+/g, "");
+    const key = subStepName.toLowerCase().replace(/\s+/g, "");
+    if (!member[key])
+      return res.status(400).json({ message: "Invalid subStepName" });
 
-    switch (normalize) {
-      case "medical":
-        member.medical.status = status;
-        member.medical.updatedAt = new Date();
-        break;
-      case "residencevisa":
-        member.residenceVisa.status = status;
-        member.residenceVisa.updatedAt = new Date();
-        break;
-      case "emiratesidsoft":
-        member.emiratesIdSoft.status = status;
-        member.emiratesIdSoft.updatedAt = new Date();
-        break;
-      case "emiratesidhard":
-        member.emiratesIdHard.status = status;
-        member.emiratesIdHard.updatedAt = new Date();
-        break;
-      default:
-        return res.status(400).json({ message: "Invalid subStepName" });
-    }
+    member[key].status = status;
+    member[key].updatedAt = new Date();
 
-    // ✅ Check if all 4 visa substeps for this member are Approved
-    const allApproved = [
-      member.medical.status,
-      member.residenceVisa.status,
-      member.emiratesIdSoft.status,
-      member.emiratesIdHard.status,
-    ].every((status) => status === "Approved");
+    // ✅ If all visa substeps for this member are approved:
+    const substeps = [
+      "medical",
+      "residenceVisa",
+      "emiratesIdSoft",
+      "emiratesIdHard",
+    ];
+    const allApproved = substeps.every((k) => member[k].status === "Approved");
 
-    // ✅ Now check if ALL main steps + ALL visa substeps are approved
-    const allMainStepsApproved = application.steps.every(
-      (s) => s.status === "Approved"
-    );
-    const allMembersApproved = application.visaSubSteps.every((m) => {
-      return (
-        m.medical.status === "Approved" &&
-        m.residenceVisa.status === "Approved" &&
-        m.emiratesIdSoft.status === "Approved" &&
-        m.emiratesIdHard.status === "Approved"
+    if (allApproved) {
+      const visaMain = application.steps.find(
+        (step) => step.stepName === "Visa Application"
       );
-    });
-
-    if (allMainStepsApproved && allMembersApproved) {
-      application.status = "Completed";
-      application.isLocked = true;
+      if (visaMain && visaMain.status !== "Approved") {
+        visaMain.status = "Approved";
+        visaMain.updatedAt = new Date();
+      }
     }
+
+    // ✅ Update overall app status
+    application.status = calculateApplicationStatus(application.steps);
 
     await application.save();
 

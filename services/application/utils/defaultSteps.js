@@ -1,10 +1,10 @@
 const defaultSteps = [
-  "KYC & Background Check",
-  "Office Space Leasing",
-  "Trade License Creation",
-  "Establishment Card & Visa Allocation",
-  "Visa Application",
-  "Tax Registration",
+  "KYC",
+  "Office Lease",
+  "Trade License",
+  "Establishment Card",
+  "Visa Application", // Combined step
+  "VAT & Corporate Tax Registration",
   "Banking Setup",
 ];
 

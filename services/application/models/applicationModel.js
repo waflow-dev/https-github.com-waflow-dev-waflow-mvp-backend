@@ -61,6 +61,7 @@ const applicationSchema = new mongoose.Schema(
       default: "New",
     },
     steps: [stepSchema],
+    sharedNote: { type: String },
     visaSubSteps: [visaSubStepSchema],
     notes: [noteSchema],
     isLocked: { type: Boolean, default: false },

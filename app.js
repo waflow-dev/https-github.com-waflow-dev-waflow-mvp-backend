@@ -3,8 +3,12 @@ import cors from "cors";
 import morgan from "morgan";
 import dotenv from "dotenv";
 
-import authRoutes from "./services/auth-user/routes/index.js";
+import authRoutes from "./services/auth/routes/index.js";
 import applicationRoutes from "./services/application/routes/index.js";
+import documentRoutes from "./services/document/routes/index.js";
+import userRoutes from "./services/user/routes/index.js";
+import auditRoutes from "./services/audit logs/routes/index.js";
+import dashboardRoutes from "./services/dashboard/routes/index.js";
 
 dotenv.config();
 
@@ -20,7 +24,11 @@ app.get("/", (req, res) => {
   res.send("WAFLOW backend is running...");
 });
 
-app.use("/api", authRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/application", applicationRoutes);
+app.use("/api/document", documentRoutes);
+app.use("/api/user", userRoutes);
+app.use("/api/audit", auditRoutes);
+app.use("/api/dashboard", dashboardRoutes);
 
 export default app;

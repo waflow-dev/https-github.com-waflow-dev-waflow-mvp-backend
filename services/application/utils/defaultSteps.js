@@ -1,17 +1,11 @@
-// Workflow step config
 const defaultSteps = [
-  "KYC",
-  "Office Lease",
-  "Trade License",
-  "Establishment Card",
-  "Visa Quota",
-  "Medical",
-  "Residence Visa",
-  "EID Soft",
-  "EID Hard",
-  "VAT",
-  "Corporate Tax",
-  "Banking",
+  "KYC & Background Check",
+  "Office Space Leasing",
+  "Trade License Creation",
+  "Establishment Card & Visa Allocation",
+  "Visa Application",
+  "Tax Registration",
+  "Banking Setup",
 ];
 
 export default defaultSteps;

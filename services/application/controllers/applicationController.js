@@ -3,6 +3,7 @@ import Customer from "../../user/models/customerModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import defaultSteps from "../utils/defaultSteps.js";
 import { stepDocumentMap } from "../utils/stepDocumentMap.js";
+import Document from "../../document/models/documentVaultModel.js";
 
 export const autoApproveStepsIfDocsValid = async (customerId) => {
   const application = await Application.findOne({ customer: customerId });
@@ -66,7 +67,7 @@ export const createApplication = async (req, res) => {
       type: "application",
       action: "application_created",
       performedBy: req.user.id,
-      targetUser: customer._id,
+      targetUser: customerId,
       details: { assignedAgent: assignedAgentId },
     });
 

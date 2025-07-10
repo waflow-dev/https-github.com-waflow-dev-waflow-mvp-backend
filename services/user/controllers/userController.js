@@ -7,21 +7,6 @@ import Agent from "../../user/models/agentModel.js";
 import bcrypt from "bcryptjs";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 
-const defaultSteps = [
-  "KYC",
-  "Office Lease",
-  "Trade License",
-  "Establishment Card",
-  "Visa Quota",
-  "Medical",
-  "Residence Visa",
-  "EID Soft",
-  "EID Hard",
-  "VAT",
-  "Corporate Tax",
-  "Banking",
-];
-
 export const createCustomer = async (req, res) => {
   try {
     const {
@@ -44,12 +29,6 @@ export const createCustomer = async (req, res) => {
       quotedPrice,
       paymentPlans,
       paymentDetails,
-      businessActivity2,
-      businessActivity3,
-      numberOfInvestors,
-      sourceOfFund,
-      initialInvestment,
-      investorDetails,
       password,
     } = req.body;
 
@@ -60,7 +39,7 @@ export const createCustomer = async (req, res) => {
     const passwordHash = await bcrypt.hash(password, 10);
 
     const customer = await Customer.create({
-      assignedAgentId,
+      assignedAgentId: assignedAgentId || null,
       firstName,
       middleName,
       lastName,
@@ -79,12 +58,6 @@ export const createCustomer = async (req, res) => {
       quotedPrice,
       paymentPlans,
       paymentDetails,
-      businessActivity2,
-      businessActivity3,
-      numberOfInvestors,
-      sourceOfFund,
-      initialInvestment,
-      investorDetails,
     });
 
     await Auth.create({
@@ -102,7 +75,7 @@ export const createCustomer = async (req, res) => {
 
     await Application.create({
       customer: customer._id,
-      assignedAgent: assignedAgentId,
+      assignedAgent: assignedAgentId || null,
       steps,
       status: "New",
     });
@@ -111,10 +84,14 @@ export const createCustomer = async (req, res) => {
 
     await logAction({
       type: "user",
-      action: "agent_created",
-      performedBy: req.user.id, // assuming you use middleware
-      targetUser: agent._id,
-      details: { name: fullName, email },
+      action: "customer_created",
+      performedBy: req.user.id,
+      targetUser: customer._id,
+      details: {
+        name: `${firstName} ${lastName}`,
+        email,
+        createdByRole: req.user.role,
+      },
     });
 
     res

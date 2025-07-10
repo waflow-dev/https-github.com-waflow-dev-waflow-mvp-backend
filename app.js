@@ -8,7 +8,7 @@ import applicationRoutes from "./services/application/routes/index.js";
 import documentRoutes from "./services/document/routes/index.js";
 import userRoutes from "./services/user/routes/index.js";
 import auditRoutes from "./services/audit logs/routes/index.js";
-import dashboardRoutes from "./services/Dashboard/routes/index.js";
+import dashboardRoutes from "./services/dashboard/routes/index.js";
 
 dotenv.config();
 

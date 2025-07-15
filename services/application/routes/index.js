@@ -9,6 +9,7 @@ import {
   addVisaMember,
   reviewApplication,
   updateOnboardingDetails,
+  getApplicationById,
 } from "../controllers/applicationController.js";
 
 const router = express.Router();
@@ -68,5 +69,7 @@ router.put(
   authorizeRoles("customer"),
   updateOnboardingDetails
 );
+
+router.get("/:appId", authenticateToken, getApplicationById);
 
 export default router;

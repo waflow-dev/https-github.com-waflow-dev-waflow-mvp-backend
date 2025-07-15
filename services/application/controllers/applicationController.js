@@ -1,7 +1,7 @@
 import Application from "../models/applicationModel.js";
 import Customer from "../../user/models/customerModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
-import defaultSteps from "../utils/defaultSteps.js";
+import workflowConfig from "../utils/workflowConfig.js";
 import { stepDocumentMap } from "../utils/stepDocumentMap.js";
 import Document from "../../document/models/documentVaultModel.js";
 
@@ -57,15 +57,29 @@ export const createApplication = async (req, res) => {
   const { customerId, assignedAgentId } = req.body;
 
   try {
-    // Prevent duplicate application
+    // Check duplicate application
     const existing = await Application.findOne({ customer: customerId });
     if (existing) {
-      return res
-        .status(400)
-        .json({ message: "Application already exists for this customer." });
+      return res.status(400).json({
+        message: "Application already exists for this customer.",
+      });
     }
 
-    const steps = defaultSteps.map((step) => ({
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    const jurisdiction = customer.jurisdiction?.toLowerCase();
+    const stepsFromConfig = workflowConfig[jurisdiction];
+
+    if (!stepsFromConfig) {
+      return res.status(400).json({
+        message: "Jurisdiction-specific workflow not found.",
+      });
+    }
+
+    const steps = stepsFromConfig.map((step) => ({
       stepName: step,
       status: "Not Started",
       updatedAt: new Date(),
@@ -177,63 +191,6 @@ export const addNote = async (req, res) => {
   }
 };
 
-export const updateVisaSubStep = async (req, res) => {
-  const { appId, memberId } = req.params;
-  const { subStepName, status } = req.body;
-
-  try {
-    const application = await Application.findById(appId);
-    if (!application)
-      return res.status(404).json({ message: "Application not found" });
-
-    const member = application.visaSubSteps.find(
-      (m) => m.memberId.toString() === memberId
-    );
-    if (!member) return res.status(404).json({ message: "Member not found" });
-
-    const key = subStepName.toLowerCase().replace(/\s+/g, "");
-    if (!member[key])
-      return res.status(400).json({ message: "Invalid subStepName" });
-
-    member[key].status = status;
-    member[key].updatedAt = new Date();
-
-    // ✅ If all visa substeps for this member are approved:
-    const substeps = [
-      "medical",
-      "residenceVisa",
-      "emiratesIdSoft",
-      "emiratesIdHard",
-    ];
-    const allApproved = substeps.every((k) => member[k].status === "Approved");
-
-    if (allApproved) {
-      const visaMain = application.steps.find(
-        (step) => step.stepName === "Visa Application"
-      );
-      if (visaMain && visaMain.status !== "Approved") {
-        visaMain.status = "Approved";
-        visaMain.updatedAt = new Date();
-      }
-    }
-
-    // ✅ Update overall app status
-    application.status = calculateApplicationStatus(application.steps);
-
-    await application.save();
-
-    res.status(200).json({
-      message: `${subStepName} updated successfully`,
-      visaSubSteps: application.visaSubSteps,
-      applicationStatus: application.status,
-    });
-  } catch (err) {
-    res
-      .status(500)
-      .json({ message: "Error updating visa substep", error: err.message });
-  }
-};
-
 export const addVisaMember = async (req, res) => {
   const { appId } = req.params;
   const { memberId } = req.body;
@@ -285,6 +242,75 @@ export const addVisaMember = async (req, res) => {
   } catch (err) {
     res.status(500).json({
       message: "Error adding visa member",
+      error: err.message,
+    });
+  }
+};
+
+export const updateVisaSubStep = async (req, res) => {
+  const { appId, memberId } = req.params;
+  const { subStepName, status } = req.body;
+
+  try {
+    const application = await Application.findById(appId);
+    if (!application)
+      return res.status(404).json({ message: "Application not found" });
+
+    const member = application.visaSubSteps.find(
+      (m) => m.memberId.toString() === memberId
+    );
+    if (!member) return res.status(404).json({ message: "Member not found" });
+
+    // Proper mapping from readable name to member keys
+    const keyMap = {
+      medical: "medical",
+      "residence visa": "residenceVisa",
+      "emirates id (soft copy)": "emiratesIdSoft",
+      "emirates id (hard copy)": "emiratesIdHard",
+    };
+
+    const normalized = subStepName.trim().toLowerCase();
+    const key = keyMap[normalized];
+
+    if (!key || !member[key]) {
+      return res.status(400).json({ message: "Invalid subStepName" });
+    }
+
+    // Update substep
+    member[key].status = status;
+    member[key].updatedAt = new Date();
+
+    // ✅ Check if ALL members completed all substeps
+    const allMembersDone = application.visaSubSteps.every((m) => {
+      return (
+        m.medical.status === "Approved" &&
+        m.residenceVisa.status === "Approved" &&
+        m.emiratesIdSoft.status === "Approved" &&
+        m.emiratesIdHard.status === "Approved"
+      );
+    });
+
+    if (allMembersDone) {
+      const visaStep = application.steps.find(
+        (s) => s.stepName === "Visa Application"
+      );
+      if (visaStep && visaStep.status !== "Approved") {
+        visaStep.status = "Approved";
+        visaStep.updatedAt = new Date();
+      }
+    }
+
+    application.status = calculateApplicationStatus(application.steps);
+    await application.save();
+
+    res.status(200).json({
+      message: `${subStepName} updated successfully`,
+      visaSubSteps: application.visaSubSteps,
+      applicationStatus: application.status,
+    });
+  } catch (err) {
+    res.status(500).json({
+      message: "Error updating visa substep",
       error: err.message,
     });
   }
@@ -383,6 +409,33 @@ export const reviewApplication = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error during application review",
+      error: err.message,
+    });
+  }
+};
+
+export const getApplicationById = async (req, res) => {
+  const { appId } = req.params;
+
+  try {
+    const application = await Application.findById(appId)
+      .populate("customer")
+      .populate("assignedAgent")
+      .populate("visaSubSteps.memberId")
+      .populate("notes.addedBy");
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: application,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching application",
       error: err.message,
     });
   }

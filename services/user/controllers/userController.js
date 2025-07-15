@@ -1,11 +1,12 @@
 import Customer from "../../user/models/customerModel.js";
 import Admin from "../../user/models/adminModel.js";
 import Application from "../../application/models/applicationModel.js"; // Imported from app service
-import { sendOnboardingEmail } from "../../notification/utils/sendMail.js"; // External call
+import sendEmail from "../../notification/utils/sendEmail.js";
 import Auth from "../../auth/models/authModel.js";
 import Agent from "../../user/models/agentModel.js";
 import bcrypt from "bcryptjs";
 import { logAction } from "../../audit logs/utils/logHelper.js";
+import workflowConfig from "../../application/utils/workflowConfig.js";
 
 export const createCustomer = async (req, res) => {
   try {
@@ -67,7 +68,16 @@ export const createCustomer = async (req, res) => {
       role: "customer",
     });
 
-    const steps = defaultSteps.map((step) => ({
+    // ✅ Determine steps based on jurisdiction
+    const workflowSteps = workflowConfig[jurisdiction?.toLowerCase()] || null;
+
+    if (!workflowSteps) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or unsupported jurisdiction workflow" });
+    }
+
+    const steps = workflowSteps.map((step) => ({
       stepName: step,
       status: "Not Started",
       updatedAt: new Date(),
@@ -80,7 +90,11 @@ export const createCustomer = async (req, res) => {
       status: "New",
     });
 
-    await sendOnboardingEmail(email, `${firstName} ${lastName}`);
+    // await sendEmail(
+    //   email,
+    //   "Account created",
+    //   `Your account has been successfully created, please login.`
+    // );
 
     await logAction({
       type: "user",
@@ -98,9 +112,10 @@ export const createCustomer = async (req, res) => {
       .status(201)
       .json({ message: "Customer created and onboarded successfully" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error creating customer", error: error.message });
+    res.status(500).json({
+      message: "Error creating customer",
+      error: error.message,
+    });
   }
 };
 
@@ -158,14 +173,6 @@ export const createAdmin = async (req, res) => {
       email,
       passwordHash,
       role: "admin",
-    });
-
-    await logAction({
-      type: "user",
-      action: "agent_created",
-      performedBy: req.user.id, // assuming you use middleware
-      targetUser: agent._id,
-      details: { name: fullName, email },
     });
 
     res.status(201).json({ message: "Admin created successfully" });

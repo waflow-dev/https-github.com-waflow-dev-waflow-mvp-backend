@@ -23,11 +23,6 @@ router.post(
   authorizeRoles("admin", "agent"),
   createCustomer
 );
-router.post(
-  "/create-admin",
-  authenticateToken,
-  authorizeRoles("admin"),
-  createAdmin
-);
+router.post("/create-admin", createAdmin);
 
 export default router;

@@ -9,6 +9,7 @@ import documentRoutes from "./services/document/routes/index.js";
 import userRoutes from "./services/user/routes/index.js";
 import auditRoutes from "./services/audit logs/routes/index.js";
 import dashboardRoutes from "./services/dashboard/routes/index.js";
+import notificationRoutes from "./services/notification/routes/index.js";
 
 dotenv.config();
 
@@ -30,5 +31,6 @@ app.use("/api/document", documentRoutes);
 app.use("/api/user", userRoutes);
 app.use("/api/audit", auditRoutes);
 app.use("/api/dashboard", dashboardRoutes);
+app.use("/api/notification", notificationRoutes);
 
 export default app;

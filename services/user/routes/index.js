@@ -7,6 +7,9 @@ import {
   createAgent,
   createCustomer,
   createAdmin,
+  getCustomerDetails,
+  getAgentDetails,
+  getAdminDetails,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -24,5 +27,24 @@ router.post(
   createCustomer
 );
 router.post("/create-admin", createAdmin);
+
+router.get(
+  "/customer/profile",
+  authenticateToken,
+  authorizeRoles("customer"),
+  getCustomerDetails
+);
+router.get(
+  "/agent/profile",
+  authenticateToken,
+  authorizeRoles("agent"),
+  getAgentDetails
+);
+router.get(
+  "/admin/profile",
+  authenticateToken,
+  authorizeRoles("admin"),
+  getAdminDetails
+);
 
 export default router;

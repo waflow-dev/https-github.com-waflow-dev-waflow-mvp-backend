@@ -182,3 +182,69 @@ export const createAdmin = async (req, res) => {
       .json({ message: "Failed to create admin", error: err.message });
   }
 };
+
+export const getCustomerDetails = async (req, res) => {
+  try {
+    const customerId = req.user.id;
+
+    const customer = await Customer.findById(customerId).lean();
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: customer,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching customer details",
+      error: error.message,
+    });
+  }
+};
+
+export const getAgentDetails = async (req, res) => {
+  try {
+    const agentId = req.user.id;
+
+    const agent = await Agent.findById(agentId).lean();
+    if (!agent) {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: agent,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching agent details",
+      error: error.message,
+    });
+  }
+};
+
+export const getAdminDetails = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+
+    const admin = await Admin.findById(adminId).lean();
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: admin,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching admin details",
+      error: error.message,
+    });
+  }
+};

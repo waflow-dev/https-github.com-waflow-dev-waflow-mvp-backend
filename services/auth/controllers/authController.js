@@ -1,9 +1,9 @@
-import { sendOnboardingEmail } from "../../notification/utils/sendMail.js"; // External call
 import { generateResetToken } from "../utils/generateResetToken.js";
 import Auth from "../models/authModel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { logAction } from "../../audit logs/utils/logHelper.js";
+import sendEmail from "../../notification/utils/sendEmail.js";
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;

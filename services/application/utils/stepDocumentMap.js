@@ -1,9 +1,17 @@
 export const stepDocumentMap = {
-  "KYC & Background Check": ["passportCopy", "passportPhoto", "proofOfAddress"],
-  "Office Space Leasing": ["signedLeaseAgreement"],
-  "Trade License Creation": ["tradeLicenseCopy"],
-  "Establishment Card & Visa Allocation": ["passportCopy", "tradeLicenseCopy"],
-  "Visa Application": [], // ⬅️ Handled through visa substeps
-  "Tax Registration": ["vatCertificate", "corporateTaxCertificate"],
+  KYC: ["passportCopy", "passportPhoto", "proofOfAddress"],
+  "Office Lease": ["signedLeaseAgreement"],
+  "Trade License": ["tradeLicenseCopy"],
+  "Establishment Card": ["passportCopy", "tradeLicenseCopy"],
+  "Visa Application": [
+    "medicalReport",
+    "residenceVisa",
+    "emiratesIdSoftCopy",
+    "emiratesIdHardCopy",
+  ],
+  "VAT & Corporate Tax Registration": [
+    "vatCertificate",
+    "corporateTaxCertificate",
+  ],
   "Banking Setup": ["bankAccountProof"],
 };

@@ -16,15 +16,10 @@ dotenv.config();
 const app = express();
 
 // Middleware
-app.use(
-  cors({
-    origin: "https://waflow-frontend.vercel.app",
-    credentials: true,
-  })
-);
+app.use(cors());
 
 // ✅ Handle preflight requests explicitly
-app.options("*", cors());
+// app.options("*", cors());
 app.use(express.json());
 app.use(morgan("dev"));
 

@@ -39,6 +39,8 @@ const customerSchema = new mongoose.Schema(
     gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
     designation: { type: String },
 
+    role: { type: String },
+
     companyType: { type: String },
     jurisdiction: { type: String },
     businessActivity1: { type: String }, // Main activity

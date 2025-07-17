@@ -7,6 +7,7 @@ const adminSchema = new mongoose.Schema({
   department: { type: String },
   status: { type: String, enum: ["active", "inactive"], default: "active" },
   createdAt: { type: Date, default: Date.now },
+  role: { type: String },
 });
 
 export default mongoose.model("Admin", adminSchema);

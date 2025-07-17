@@ -1,9 +1,9 @@
-import { sendOnboardingEmail } from "../../notification/utils/sendMail.js"; // External call
 import { generateResetToken } from "../utils/generateResetToken.js";
 import Auth from "../models/authModel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { logAction } from "../../audit logs/utils/logHelper.js";
+import sendEmail from "../../notification/utils/sendEmail.js";
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -22,6 +22,7 @@ export const loginUser = async (req, res) => {
       {
         id: userAuth.userId,
         role: userAuth.role,
+        email: userAuth.email, // Add email to payload
       },
       process.env.JWT_SECRET,
       { expiresIn: "1d" }
@@ -102,5 +103,17 @@ export const resetPassword = async (req, res) => {
     res
       .status(400)
       .json({ message: "Invalid or expired token", error: err.message });
+  }
+};
+
+
+export const getProfile = async (req, res) => {
+  try {
+    const user = await Auth.findOne({ userId: req.user.userId });
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    res.status(200).json({ user });
+  } catch (err) {
+    res.status(500).json({ message: "Server error", error: err.message });
   }
 };

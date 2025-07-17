@@ -1,11 +1,12 @@
 import Customer from "../../user/models/customerModel.js";
 import Admin from "../../user/models/adminModel.js";
 import Application from "../../application/models/applicationModel.js"; // Imported from app service
-import { sendOnboardingEmail } from "../../notification/utils/sendMail.js"; // External call
+import sendEmail from "../../notification/utils/sendEmail.js";
 import Auth from "../../auth/models/authModel.js";
 import Agent from "../../user/models/agentModel.js";
 import bcrypt from "bcryptjs";
 import { logAction } from "../../audit logs/utils/logHelper.js";
+import workflowConfig from "../../application/utils/workflowConfig.js";
 
 export const createCustomer = async (req, res) => {
   try {
@@ -45,6 +46,7 @@ export const createCustomer = async (req, res) => {
       lastName,
       dob,
       email,
+      role:'customer',
       phoneNumber,
       currentAddress,
       permanentAddress,
@@ -67,7 +69,16 @@ export const createCustomer = async (req, res) => {
       role: "customer",
     });
 
-    const steps = defaultSteps.map((step) => ({
+    // ✅ Determine steps based on jurisdiction
+    const workflowSteps = workflowConfig[jurisdiction?.toLowerCase()] || null;
+
+    if (!workflowSteps) {
+      return res
+        .status(400)
+        .json({ message: "Invalid or unsupported jurisdiction workflow" });
+    }
+
+    const steps = workflowSteps.map((step) => ({
       stepName: step,
       status: "Not Started",
       updatedAt: new Date(),
@@ -80,7 +91,11 @@ export const createCustomer = async (req, res) => {
       status: "New",
     });
 
-    await sendOnboardingEmail(email, `${firstName} ${lastName}`);
+    // await sendEmail(
+    //   email,
+    //   "Account created",
+    //   `Your account has been successfully created, please login.`
+    // );
 
     await logAction({
       type: "user",
@@ -98,9 +113,10 @@ export const createCustomer = async (req, res) => {
       .status(201)
       .json({ message: "Customer created and onboarded successfully" });
   } catch (error) {
-    res
-      .status(500)
-      .json({ message: "Error creating customer", error: error.message });
+    res.status(500).json({
+      message: "Error creating customer",
+      error: error.message,
+    });
   }
 };
 
@@ -160,18 +176,98 @@ export const createAdmin = async (req, res) => {
       role: "admin",
     });
 
-    await logAction({
-      type: "user",
-      action: "agent_created",
-      performedBy: req.user.id, // assuming you use middleware
-      targetUser: agent._id,
-      details: { name: fullName, email },
-    });
-
     res.status(201).json({ message: "Admin created successfully" });
   } catch (err) {
     res
       .status(500)
       .json({ message: "Failed to create admin", error: err.message });
+  }
+};
+
+export const getCustomerDetails = async (req, res) => {
+  try {
+    const customerId = req.user.userId;
+
+    console.log('customerId', customerId);
+    
+
+    const customer = await Customer.findById(customerId).lean();
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: customer,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching customer details",
+      error: error.message,
+    });
+  }
+};
+
+export const getAgentDetails = async (req, res) => {
+  try {
+    const agentId = req.user.id;
+
+    const agent = await Agent.findById(agentId).lean();
+    if (!agent) {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: agent,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching agent details",
+      error: error.message,
+    });
+  }
+};
+
+export const getAdminDetails = async (req, res) => {
+  try {
+    const adminId = req.user.id;
+
+    const admin = await Admin.findById(adminId).lean();
+    if (!admin) {
+      return res.status(404).json({ message: "Admin not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: admin,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching admin details",
+      error: error.message,
+    });
+  }
+};
+
+export const getAllCustomers = async (req, res) => {
+  try {
+    const customers = await Customer.find({}).lean();
+    console.log('All customers in database:', customers.length);
+    console.log('Customers:', customers);
+    
+    res.status(200).json({
+      success: true,
+      data: customers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching customers",
+      error: error.message,
+    });
   }
 };

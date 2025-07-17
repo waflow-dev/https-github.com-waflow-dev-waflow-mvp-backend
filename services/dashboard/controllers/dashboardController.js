@@ -81,3 +81,29 @@ export const getCustomerDashboard = async (req, res) => {
     });
   }
 };
+
+export const getCustomerDocuments = async (req, res) => {
+  const { customerId } = req.params;
+
+  try {
+    const documents = await Document.find({ linkedTo: customerId });
+
+    if (!documents || documents.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No documents found for this customer",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      documents,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching customer documents",
+      error: err.message,
+    });
+  }
+};

@@ -7,6 +7,7 @@ import {
   updateDocumentStatus,
   getCustomerDocuments,
   getApplicationDocuments,
+  serveDocumentFile,
 } from "../controllers/documentController.js";
 
 import { upload } from "../middleware/multer.meddleware.js";
@@ -35,8 +36,13 @@ router.get(
 router.get(
   "/application/:appId",
   authenticateToken,
+
   authorizeRoles("agent", "admin"),
   getApplicationDocuments
+);
+router.get(
+  "/file/:id",
+  serveDocumentFile
 );
 
 // Add required documents endpoint

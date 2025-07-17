@@ -30,10 +30,8 @@ router.post(
 router.post("/create-admin", createAdmin);
 
 router.get(
-  "/customer/profile",
+  "/customer/profile/:id",
   (req, res, next) => { console.log("[DEBUG] /customer/profile route hit"); next(); },
-  authenticateToken,
- 
   getCustomerDetails
 );
 router.get(

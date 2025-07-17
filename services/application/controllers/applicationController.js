@@ -476,7 +476,8 @@ export const getAllApplications = async (req, res) => {
     
     // If user is an agent, only show applications assigned to them
     if (role === 'agent') {
-      const agentId = userId || altUserId;
+      // Use userId (matches assignedAgent in DB)
+      const agentId = req.user.userId?.toString() || req.user.id?.toString();
       console.log('[DEBUG] agentId for query:', agentId);
       query.assignedAgent = agentId;
     }

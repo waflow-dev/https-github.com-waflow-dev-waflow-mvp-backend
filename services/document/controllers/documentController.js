@@ -2,6 +2,7 @@ import Document from "../models/documentVaultModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import { autoApproveStepsIfDocsValid } from "../../application/controllers/applicationController.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import axios from "axios";
 
 export const createDocument = async (req, res) => {
   const user = req.user;
@@ -39,7 +40,7 @@ export const createDocument = async (req, res) => {
       linkedTo,
       linkedModel,
       fileUrl: uploadedFileUrl,
-      userId: user?._id,
+      userId: user?.userId,
       expiryDate,
       notes,
     });
@@ -153,5 +154,32 @@ export const getApplicationDocuments = async (req, res) => {
       message: "Error fetching application documents",
       error: err.message,
     });
+  }
+};
+
+export const serveDocumentFile = async (req, res) => {
+  try {
+    const doc = await Document.findById(req.params.id);
+    if (!doc) return res.status(404).send("File not found");
+
+    const fileUrl = doc.fileUrl;
+    if (!fileUrl) return res.status(404).send("File URL not found");
+
+    const fileType = fileUrl.split('.').pop().toLowerCase();
+
+    // Fetch the file as a stream
+    const response = await axios.get(fileUrl, { responseType: "stream" });
+
+    // Set CORS and content headers
+    res.setHeader("Access-Control-Allow-Origin", "https://waflow-frontend.vercel.app");
+    res.setHeader("Access-Control-Allow-Credentials", "true");
+    if (fileType === "pdf") {
+      res.setHeader("Content-Type", "application/pdf");
+      res.setHeader("Content-Disposition", "inline");
+    }
+    response.data.pipe(res);
+  } catch (err) {
+    console.error("Error serving file:", err);
+    res.status(500).send("Error serving file: " + (err?.message || err));
   }
 };

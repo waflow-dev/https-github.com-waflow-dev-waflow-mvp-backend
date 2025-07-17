@@ -16,8 +16,10 @@ export const uploadOnCloudinary = async (localFilePath) => {
     if (!localFilePath) {
       throw new Error("Local file path is required");
     }
+    // Detect file type
+    const isPDF = localFilePath.toLowerCase().endsWith(".pdf");
     response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: "auto",
+      resource_type: isPDF ? "raw" : "auto", // Use 'raw' for PDFs, 'auto' for images
     });
     console.log("File uploaded to Cloudinary:", response.url);
     return response;

@@ -186,7 +186,7 @@ export const createAdmin = async (req, res) => {
 
 export const getCustomerDetails = async (req, res) => {
   try {
-    const customerId = req.user.userId;
+    const customerId = req.params.id;
 
     console.log('customerId', customerId);
     

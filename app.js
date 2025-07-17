@@ -15,17 +15,40 @@ dotenv.config();
 
 const app = express();
 
-// Middleware
+const allowedOrigins = [
+  "https://waflow-frontend.vercel.app",
+  "http://localhost:5173"
+];
+
+// ✅ Main CORS middleware
 app.use(
   cors({
-    origin: ["https://waflow-frontend.vercel.app/", "http://localhost:5173"], // ✅ Your deployed frontend
-    credentials: true,
+    origin: function (origin, callback) {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        callback(new Error("Not allowed by CORS"));
+      }
+    },
+    credentials: true
   })
 );
+
+// ✅ Preflight support (MUST match logic above)
+app.options("*", cors({
+  origin: function (origin, callback) {
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
+  credentials: true
+}));
+
 app.use(express.json());
 app.use(morgan("dev"));
 
-// Test Route
 app.get("/", (req, res) => {
   res.send("WAFLOW backend is running...");
 });

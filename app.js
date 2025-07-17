@@ -18,7 +18,7 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: ["https://waflow-frontend.vercel.app", "http://localhost:5173"],
+    origin: "https://waflow-frontend.vercel.app",
     credentials: true,
   })
 );

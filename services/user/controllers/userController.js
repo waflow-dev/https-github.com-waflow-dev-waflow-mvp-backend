@@ -46,6 +46,7 @@ export const createCustomer = async (req, res) => {
       lastName,
       dob,
       email,
+      role:'customer',
       phoneNumber,
       currentAddress,
       permanentAddress,
@@ -185,7 +186,10 @@ export const createAdmin = async (req, res) => {
 
 export const getCustomerDetails = async (req, res) => {
   try {
-    const customerId = req.user.id;
+    const customerId = req.user.userId;
+
+    console.log('customerId', customerId);
+    
 
     const customer = await Customer.findById(customerId).lean();
     if (!customer) {
@@ -244,6 +248,25 @@ export const getAdminDetails = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error fetching admin details",
+      error: error.message,
+    });
+  }
+};
+
+export const getAllCustomers = async (req, res) => {
+  try {
+    const customers = await Customer.find({}).lean();
+    console.log('All customers in database:', customers.length);
+    console.log('Customers:', customers);
+    
+    res.status(200).json({
+      success: true,
+      data: customers,
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching customers",
       error: error.message,
     });
   }

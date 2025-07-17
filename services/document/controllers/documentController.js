@@ -1,27 +1,45 @@
 import Document from "../models/documentVaultModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import { autoApproveStepsIfDocsValid } from "../../application/controllers/applicationController.js";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
 export const createDocument = async (req, res) => {
+  const user = req.user;
+
+  const file = req.file;
+
+  if (!file) {
+    return res.status(400).json({ message: "File is required (image or PDF)" });
+  }
+
   try {
+    // Upload the file to Cloudinary
+    const cloudinaryResult = await uploadOnCloudinary(file.path);
+
+    if (!cloudinaryResult?.secure_url && !cloudinaryResult?.url) {
+      return res.status(500).json({ message: "File upload failed" });
+    }
+
+    const uploadedFileUrl = cloudinaryResult.secure_url || cloudinaryResult.url;
+
+    // Extract other fields from body
     const {
       documentName,
       documentType,
       linkedTo,
       linkedModel,
-      fileUrl,
-      uploadedBy,
       expiryDate,
       notes,
     } = req.body;
 
+    // Save document to database
     const newDoc = await Document.create({
       documentName,
       documentType,
       linkedTo,
       linkedModel,
-      fileUrl,
-      uploadedBy,
+      fileUrl: uploadedFileUrl,
+      userId: user?._id,
       expiryDate,
       notes,
     });
@@ -32,6 +50,7 @@ export const createDocument = async (req, res) => {
       data: newDoc,
     });
   } catch (err) {
+    console.error("Error uploading document:", err);
     res.status(500).json({
       success: false,
       message: "Error saving document",
@@ -39,6 +58,7 @@ export const createDocument = async (req, res) => {
     });
   }
 };
+
 
 export const updateDocumentStatus = async (req, res) => {
   const { id } = req.params;

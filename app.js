@@ -18,10 +18,13 @@ const app = express();
 // Middleware
 app.use(
   cors({
-    origin: ["https://waflow-frontend.vercel.app/", "http://localhost:5173"], // ✅ Your deployed frontend
+    origin: ["https://waflow-frontend.vercel.app", "http://localhost:5173"],
     credentials: true,
   })
 );
+
+// ✅ Handle preflight requests explicitly
+app.options("*", cors());
 app.use(express.json());
 app.use(morgan("dev"));
 

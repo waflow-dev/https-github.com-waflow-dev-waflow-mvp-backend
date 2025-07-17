@@ -13,10 +13,11 @@ import notificationRoutes from "./services/notification/routes/index.js";
 
 dotenv.config();
 
-// --- Add this block for explicit CORS preflight handling ---
+
 const allowedOrigins = [
   "https://waflow-frontend.vercel.app",
-  "http://localhost:5173"
+  "http://localhost:5173",
+  "http://localhost:8080"
 ];
 
 const corsHeaders = (req, res, next) => {

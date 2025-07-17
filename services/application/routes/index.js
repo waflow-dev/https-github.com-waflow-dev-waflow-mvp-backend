@@ -10,9 +10,18 @@ import {
   reviewApplication,
   updateOnboardingDetails,
   getApplicationById,
+  getAllApplications
 } from "../controllers/applicationController.js";
 
 const router = express.Router();
+
+// Get all applications — allowed for agent/admin
+router.get(
+  "/",
+  authenticateToken,
+  authorizeRoles("agent", "admin"),
+  getAllApplications
+);
 
 // Create a new application — allowed for agent/admin
 router.post(

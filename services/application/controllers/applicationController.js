@@ -318,26 +318,47 @@ export const updateVisaSubStep = async (req, res) => {
 
 export const updateOnboardingDetails = async (req, res) => {
   const { customerId } = req.params;
-  const {
-    businessActivity2,
-    businessActivity3,
-    numberOfInvestors,
-    sourceOfFund,
-    initialInvestment,
-    investorDetails,
-  } = req.body;
+  const body = req.body;
+
+  console.log('customerId put: ', customerId);
+  
+
+  // Map frontend fields to backend model
+  const updateFields = {
+    // Personal Details
+    firstName: body.customerName?.split(' ')[0] || '',
+    middleName: body.customerName?.split(' ')[1] || '',
+    lastName: body.customerName?.split(' ').slice(2).join(' ') || '',
+    dob: body.dateOfBirth,
+    email: body.emailAddress,
+    phoneNumber: body.phoneNumber,
+    nationality: body.nationality,
+    gender: body.gender,
+    // Address
+    permanentAddress: body.permanentAddress,
+    currentAddress: body.localAddress,
+    countryOfResidence: body.countryOfResidence,
+    // Passport & ID
+    // (Assume passportPhoto and localProof are handled as uploads elsewhere)
+    // Financials
+    sourceOfFund: body.sourceOfFund,
+    quotedPrice: body.quotedPrice,
+    paymentDetails: body.paymentDetails,
+    // Company Details
+    companyType: body.companyTypePreference,
+    jurisdiction: body.companyJurisdiction,
+    businessActivity1: body.businessActivity[0] || '',
+    officeType: body.officeType,
+    // Investor Info
+    numberOfInvestors: Number(body.numberOfInvestors) || 1,
+    role: body.role,
+    // Optionally add more fields as needed
+  };
 
   try {
     const customer = await Customer.findByIdAndUpdate(
       customerId,
-      {
-        businessActivity2,
-        businessActivity3,
-        numberOfInvestors,
-        sourceOfFund,
-        initialInvestment,
-        investorDetails,
-      },
+      updateFields,
       { new: true }
     );
 
@@ -437,6 +458,50 @@ export const getApplicationById = async (req, res) => {
       success: false,
       message: "Error fetching application",
       error: err.message,
+    });
+  }
+};
+
+export const getAllApplications = async (req, res) => {
+  try {
+    console.log('[DEBUG] getAllApplications called');
+    console.log('[DEBUG] req.user:', req.user);
+    
+    const { role, id: userId, userId: altUserId } = req.user;
+    console.log('[DEBUG] role:', role);
+    console.log('[DEBUG] userId:', userId);
+    console.log('[DEBUG] altUserId:', altUserId);
+    
+    let query = {};
+    
+    // If user is an agent, only show applications assigned to them
+    if (role === 'agent') {
+      const agentId = userId || altUserId;
+      console.log('[DEBUG] agentId for query:', agentId);
+      query.assignedAgent = agentId;
+    }
+    // If user is admin, show all applications
+    
+    console.log('[DEBUG] query:', query);
+    
+    const applications = await Application.find(query)
+      .populate('customer', 'firstName lastName email phoneNumber')
+      .populate('assignedAgent', 'fullName email')
+      .sort({ createdAt: -1 });
+
+    console.log('[DEBUG] Found applications:', applications.length);
+    console.log('[DEBUG] Applications:', applications);
+
+    res.status(200).json({
+      success: true,
+      data: applications,
+    });
+  } catch (error) {
+    console.error('[DEBUG] Error in getAllApplications:', error);
+    res.status(500).json({
+      success: false,
+      message: "Error fetching applications",
+      error: error.message,
     });
   }
 };

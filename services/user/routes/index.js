@@ -10,6 +10,7 @@ import {
   getCustomerDetails,
   getAgentDetails,
   getAdminDetails,
+  getAllCustomers,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -30,8 +31,9 @@ router.post("/create-admin", createAdmin);
 
 router.get(
   "/customer/profile",
+  (req, res, next) => { console.log("[DEBUG] /customer/profile route hit"); next(); },
   authenticateToken,
-  authorizeRoles("customer"),
+ 
   getCustomerDetails
 );
 router.get(
@@ -45,6 +47,12 @@ router.get(
   authenticateToken,
   authorizeRoles("admin"),
   getAdminDetails
+);
+
+router.get(
+  "/customers",
+  authenticateToken,
+  getAllCustomers
 );
 
 export default router;

@@ -18,6 +18,12 @@ const documentVaultSchema = new mongoose.Schema(
 
     fileUrl: { type: String, required: true },
 
+    userId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "Auth",
+    },
+
     status: {
       type: String,
       enum: ["Pending", "Approved", "Rejected"],

@@ -7,6 +7,7 @@ const agentSchema = new mongoose.Schema({
   status: { type: String, enum: ["active", "inactive"], default: "active" },
   createdBy: { type: mongoose.Schema.Types.ObjectId, ref: "Admin" },
   createdAt: { type: Date, default: Date.now },
+  role: { type: String },
 });
 
 export default mongoose.model("Agent", agentSchema);

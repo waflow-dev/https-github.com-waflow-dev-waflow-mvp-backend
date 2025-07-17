@@ -13,38 +13,29 @@ import notificationRoutes from "./services/notification/routes/index.js";
 
 dotenv.config();
 
-const app = express();
-
+// --- Add this block for explicit CORS preflight handling ---
 const allowedOrigins = [
   "https://waflow-frontend.vercel.app",
   "http://localhost:5173"
 ];
 
-// ✅ Main CORS middleware
-app.use(
-  cors({
-    origin: function (origin, callback) {
-      if (!origin || allowedOrigins.includes(origin)) {
-        callback(null, true);
-      } else {
-        callback(new Error("Not allowed by CORS"));
-      }
-    },
-    credentials: true
-  })
-);
+const corsHeaders = (req, res, next) => {
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.header("Access-Control-Allow-Origin", origin);
+  }
+  res.header("Access-Control-Allow-Credentials", "true");
+  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS");
+  res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization");
+  if (req.method === "OPTIONS") {
+    return res.sendStatus(200);
+  }
+  next();
+};
 
-// ✅ Preflight support (MUST match logic above)
-app.options("*", cors({
-  origin: function (origin, callback) {
-    if (!origin || allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      callback(new Error("Not allowed by CORS"));
-    }
-  },
-  credentials: true
-}));
+// Place this before any other middleware
+const app = express();
+app.use(corsHeaders);
 
 app.use(express.json());
 app.use(morgan("dev"));

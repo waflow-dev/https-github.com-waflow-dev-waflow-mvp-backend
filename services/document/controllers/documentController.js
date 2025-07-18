@@ -1,8 +1,24 @@
 import Document from "../models/documentVaultModel.js";
+import Application from "../../application/models/applicationModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import { autoApproveStepsIfDocsValid } from "../../application/controllers/applicationController.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
 import axios from "axios";
+
+// Helper: auto-update global status
+const calculateApplicationStatus = (steps) => {
+  const total = steps.length;
+  const approved = steps.filter((s) => s.status === "Approved").length;
+  const started = steps.some((s) => s.status === "Started");
+  const declined = steps.some((s) => s.status === "Declined");
+
+  if (declined) return "Rejected";
+  if (approved === total) return "Completed";
+  if (started) return "In Progress";
+  if (steps.every((s) => s.status === "Not Started"))
+    return "Ready for Processing";
+  return "Waiting for Agent Review";
+};
 
 export const createDocument = async (req, res) => {
   const user = req.user;
@@ -31,6 +47,8 @@ export const createDocument = async (req, res) => {
       linkedModel,
       expiryDate,
       notes,
+      applicationId,
+      relatedStepName,
     } = req.body;
 
     // Save document to database
@@ -44,6 +62,22 @@ export const createDocument = async (req, res) => {
       expiryDate,
       notes,
     });
+
+    if (applicationId && relatedStepName) {
+      const application = await Application.findById(applicationId);
+      if (application) {
+        const step = application.steps.find(
+          (s) => s.stepName.toLowerCase() === relatedStepName.toLowerCase()
+        );
+
+        if (step && step.status === "Not Started") {
+          step.status = "Submitted for Review";
+          step.updatedAt = new Date();
+          application.status = calculateApplicationStatus(application.steps); // Recalculate overall status
+          await application.save();
+        }
+      }
+    }
 
     res.status(201).json({
       success: true,

@@ -37,7 +37,7 @@ export const createDocument = async (req, res) => {
     const newDoc = await Document.create({
       documentName,
       documentType,
-      linkedTo,
+      linkedTo: user?.userId,
       linkedModel,
       fileUrl: uploadedFileUrl,
       userId: user?.userId,
@@ -59,7 +59,6 @@ export const createDocument = async (req, res) => {
     });
   }
 };
-
 
 export const updateDocumentStatus = async (req, res) => {
   const { id } = req.params;
@@ -165,13 +164,16 @@ export const serveDocumentFile = async (req, res) => {
     const fileUrl = doc.fileUrl;
     if (!fileUrl) return res.status(404).send("File URL not found");
 
-    const fileType = fileUrl.split('.').pop().toLowerCase();
+    const fileType = fileUrl.split(".").pop().toLowerCase();
 
     // Fetch the file as a stream
     const response = await axios.get(fileUrl, { responseType: "stream" });
 
     // Set CORS and content headers
-    res.setHeader("Access-Control-Allow-Origin", "https://waflow-frontend.vercel.app");
+    res.setHeader(
+      "Access-Control-Allow-Origin",
+      "https://waflow-frontend.vercel.app"
+    );
     res.setHeader("Access-Control-Allow-Credentials", "true");
     if (fileType === "pdf") {
       res.setHeader("Content-Type", "application/pdf");

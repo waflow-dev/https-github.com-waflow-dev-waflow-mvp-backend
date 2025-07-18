@@ -113,9 +113,11 @@ export const createCustomer = async (req, res) => {
       .status(201)
       .json({ message: "Customer created and onboarded successfully" });
   } catch (error) {
+    console.error("Error creating customer:", error); // Log full error
     res.status(500).json({
       message: "Error creating customer",
       error: error.message,
+      stack: error.stack, // Include stack trace for debugging
     });
   }
 };

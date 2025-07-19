@@ -23,7 +23,6 @@ const calculateApplicationStatus = (steps) => {
 
 export const createDocument = async (req, res) => {
   const user = req.user;
-
   const file = req.file;
 
   if (!file) {
@@ -31,62 +30,57 @@ export const createDocument = async (req, res) => {
   }
 
   try {
-    // Upload the file to Cloudinary
     const cloudinaryResult = await uploadOnCloudinary(file.path);
-
-    if (!cloudinaryResult?.secure_url && !cloudinaryResult?.url) {
+    const uploadedFileUrl =
+      cloudinaryResult?.secure_url || cloudinaryResult?.url;
+    if (!uploadedFileUrl)
       return res.status(500).json({ message: "File upload failed" });
-    }
 
-    const uploadedFileUrl = cloudinaryResult.secure_url || cloudinaryResult.url;
-
-    // Extract other fields from body
     const {
       documentName,
       documentType,
+      relatedStepName,
       linkedModel,
       expiryDate,
       notes,
       applicationId,
-      relatedStepName,
     } = req.body;
 
-    const allStepNames = [
-      ...new Set(Object.values(workflowConfig).flat()), // removes duplicates
-    ];
-
-    if (!allStepNames.includes(req.body.documentType)) {
+    const allStepNames = [...new Set(Object.values(workflowConfig).flat())];
+    if (!allStepNames.includes(relatedStepName)) {
       return res
         .status(400)
-        .json({ message: "Invalid documentType for any jurisdiction step." });
+        .json({
+          message: "Invalid relatedStepName for any jurisdiction step.",
+        });
     }
 
     const linkedTo =
       linkedModel === "Application" ? applicationId : user?.userId;
 
-    // Save document to database
     const newDoc = await Document.create({
       documentName,
       documentType,
-      linkedTo: user?.userId,
+      relatedStepName,
+      linkedTo,
       linkedModel,
       fileUrl: uploadedFileUrl,
       userId: user?.userId,
       expiryDate,
       notes,
+      uploadedBy: user?.role || "unknown",
     });
 
     if (applicationId && relatedStepName) {
       const application = await Application.findById(applicationId);
       if (application) {
         const step = application.steps.find(
-          (s) => s.stepName.toLowerCase() === relatedStepName.toLowerCase()
+          (s) => s.stepName === relatedStepName
         );
-
         if (step && step.status === "Not Started") {
           step.status = "Submitted for Review";
           step.updatedAt = new Date();
-          application.status = calculateApplicationStatus(application.steps); // Recalculate overall status
+          application.status = calculateApplicationStatus(application.steps);
           await application.save();
         }
       }
@@ -94,7 +88,7 @@ export const createDocument = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Document saved successfully",
+      message: "Document saved and step updated successfully",
       data: newDoc,
     });
   } catch (err) {

@@ -79,6 +79,7 @@ export const createApplication = async (req, res) => {
       });
     }
 
+    // Initialize steps with default schema
     const steps = stepsFromConfig.map((step) => ({
       stepName: step,
       status: "Not Started",
@@ -320,15 +321,14 @@ export const updateOnboardingDetails = async (req, res) => {
   const { customerId } = req.params;
   const body = req.body;
 
-  console.log('customerId put: ', customerId);
-  
+  console.log("customerId put: ", customerId);
 
   // Map frontend fields to backend model
   const updateFields = {
     // Personal Details
-    firstName: body.customerName?.split(' ')[0] || '',
-    middleName: body.customerName?.split(' ')[1] || '',
-    lastName: body.customerName?.split(' ').slice(2).join(' ') || '',
+    firstName: body.customerName?.split(" ")[0] || "",
+    middleName: body.customerName?.split(" ")[1] || "",
+    lastName: body.customerName?.split(" ").slice(2).join(" ") || "",
     dob: body.dateOfBirth,
     email: body.emailAddress,
     phoneNumber: body.phoneNumber,
@@ -347,7 +347,7 @@ export const updateOnboardingDetails = async (req, res) => {
     // Company Details
     companyType: body.companyTypePreference,
     jurisdiction: body.companyJurisdiction,
-    businessActivity1: body.businessActivity[0] || '',
+    businessActivity1: body.businessActivity[0] || "",
     officeType: body.officeType,
     // Investor Info
     numberOfInvestors: Number(body.numberOfInvestors) || 1,
@@ -464,41 +464,41 @@ export const getApplicationById = async (req, res) => {
 
 export const getAllApplications = async (req, res) => {
   try {
-    console.log('[DEBUG] getAllApplications called');
-    console.log('[DEBUG] req.user:', req.user);
-    
+    console.log("[DEBUG] getAllApplications called");
+    console.log("[DEBUG] req.user:", req.user);
+
     const { role, id: userId, userId: altUserId } = req.user;
-    console.log('[DEBUG] role:', role);
-    console.log('[DEBUG] userId:', userId);
-    console.log('[DEBUG] altUserId:', altUserId);
-    
+    console.log("[DEBUG] role:", role);
+    console.log("[DEBUG] userId:", userId);
+    console.log("[DEBUG] altUserId:", altUserId);
+
     let query = {};
-    
+
     // If user is an agent, only show applications assigned to them
-    if (role === 'agent') {
+    if (role === "agent") {
       // Use userId (matches assignedAgent in DB)
       const agentId = req.user.userId?.toString() || req.user.id?.toString();
-      console.log('[DEBUG] agentId for query:', agentId);
+      console.log("[DEBUG] agentId for query:", agentId);
       query.assignedAgent = agentId;
     }
     // If user is admin, show all applications
-    
-    console.log('[DEBUG] query:', query);
-    
+
+    console.log("[DEBUG] query:", query);
+
     const applications = await Application.find(query)
-      .populate('customer', 'firstName lastName email phoneNumber')
-      .populate('assignedAgent', 'fullName email')
+      .populate("customer", "firstName lastName email phoneNumber")
+      .populate("assignedAgent", "fullName email")
       .sort({ createdAt: -1 });
 
-    console.log('[DEBUG] Found applications:', applications.length);
-    console.log('[DEBUG] Applications:', applications);
+    console.log("[DEBUG] Found applications:", applications.length);
+    console.log("[DEBUG] Applications:", applications);
 
     res.status(200).json({
       success: true,
       data: applications,
     });
   } catch (error) {
-    console.error('[DEBUG] Error in getAllApplications:', error);
+    console.error("[DEBUG] Error in getAllApplications:", error);
     res.status(500).json({
       success: false,
       message: "Error fetching applications",

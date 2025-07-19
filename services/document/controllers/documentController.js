@@ -63,6 +63,22 @@ export const createDocument = async (req, res) => {
       notes,
     });
 
+    // --- NEW LOGIC: If this is the first document for the application, update Application status ---
+    if (linkedModel === 'Application' && applicationId) {
+      const docCount = await Document.countDocuments({
+        linkedModel: 'Application',
+        linkedTo: applicationId
+      });
+      if (docCount === 1) {
+        const app = await Application.findById(applicationId);
+        if (app && app.status === 'New') {
+          app.status = 'Submitted for Review';
+          await app.save();
+        }
+      }
+    }
+    // --- END NEW LOGIC ---
+
     if (applicationId && relatedStepName) {
       const application = await Application.findById(applicationId);
       if (application) {
@@ -217,5 +233,25 @@ export const serveDocumentFile = async (req, res) => {
   } catch (err) {
     console.error("Error serving file:", err);
     res.status(500).send("Error serving file: " + (err?.message || err));
+  }
+};
+
+export const addDocumentNote = async (req, res) => {
+  const { id } = req.params;
+  const { message } = req.body;
+  const addedBy = req.user.id;
+  const addedByRole = req.user.role;
+
+  try {
+    const doc = await Document.findById(id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+
+    if (!doc.notes) doc.notes = [];
+    doc.notes.push({ message, addedBy, addedByRole, timestamp: new Date() });
+    await doc.save();
+
+    res.status(200).json({ success: true, notes: doc.notes });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to add note", error: err.message });
   }
 };

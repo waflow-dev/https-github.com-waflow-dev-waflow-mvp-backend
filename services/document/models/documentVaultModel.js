@@ -32,7 +32,14 @@ const documentVaultSchema = new mongoose.Schema(
 
     uploadedBy: String,
     expiryDate: Date,
-    notes: String,
+    notes: [
+      {
+        message: String,
+        addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Auth" },
+        addedByRole: { type: String, enum: ["agent", "admin", "customer"] },
+        timestamp: { type: Date, default: Date.now },
+      }
+    ],
   },
   { timestamps: true }
 );

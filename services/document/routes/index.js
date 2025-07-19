@@ -8,6 +8,7 @@ import {
   getCustomerDocuments,
   getApplicationDocuments,
   serveDocumentFile,
+  addDocumentNote,
 } from "../controllers/documentController.js";
 
 import { upload } from "../middleware/multer.meddleware.js";
@@ -26,6 +27,12 @@ router.put(
   authenticateToken,
   authorizeRoles("agent", "admin"),
   updateDocumentStatus
+);
+router.post(
+  "/:id/note",
+  authenticateToken,
+  authorizeRoles("agent", "admin", "customer"),
+  addDocumentNote
 );
 router.get(
   "/customer/:customerId",

@@ -3,6 +3,7 @@ import Application from "../../application/models/applicationModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import { autoApproveStepsIfDocsValid } from "../../application/controllers/applicationController.js";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import workflowConfig from "../../application/utils/workflowConfig.js";
 import axios from "axios";
 
 // Helper: auto-update global status
@@ -43,13 +44,25 @@ export const createDocument = async (req, res) => {
     const {
       documentName,
       documentType,
-      linkedTo,
       linkedModel,
       expiryDate,
       notes,
       applicationId,
       relatedStepName,
     } = req.body;
+
+    const allStepNames = [
+      ...new Set(Object.values(workflowConfig).flat()), // removes duplicates
+    ];
+
+    if (!allStepNames.includes(req.body.documentType)) {
+      return res
+        .status(400)
+        .json({ message: "Invalid documentType for any jurisdiction step." });
+    }
+
+    const linkedTo =
+      linkedModel === "Application" ? applicationId : user?.userId;
 
     // Save document to database
     const newDoc = await Document.create({

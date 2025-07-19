@@ -1,12 +1,13 @@
 import Customer from "../../user/models/customerModel.js";
 import Admin from "../../user/models/adminModel.js";
-import Application from "../../application/models/applicationModel.js"; // Imported from app service
+import Application from "../../application/models/applicationModel.js";
 import sendEmail from "../../notification/utils/sendEmail.js";
 import Auth from "../../auth/models/authModel.js";
 import Agent from "../../user/models/agentModel.js";
 import bcrypt from "bcryptjs";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import workflowConfig from "../../application/utils/workflowConfig.js";
+import { createApplicationForCustomer } from "../../application/utils/createApplicationForCustomer.js";
 
 export const createCustomer = async (req, res) => {
   try {
@@ -46,7 +47,7 @@ export const createCustomer = async (req, res) => {
       lastName,
       dob,
       email,
-      role:'customer',
+      role: "customer",
       phoneNumber,
       currentAddress,
       permanentAddress,
@@ -69,26 +70,10 @@ export const createCustomer = async (req, res) => {
       role: "customer",
     });
 
-    // ✅ Determine steps based on jurisdiction
-    const workflowSteps = workflowConfig[jurisdiction?.toLowerCase()] || null;
-
-    if (!workflowSteps) {
-      return res
-        .status(400)
-        .json({ message: "Invalid or unsupported jurisdiction workflow" });
-    }
-
-    const steps = workflowSteps.map((step) => ({
-      stepName: step,
-      status: "Not Started",
-      updatedAt: new Date(),
-    }));
-
-    await Application.create({
-      customer: customer._id,
-      assignedAgent: assignedAgentId || null,
-      steps,
-      status: "New",
+    await createApplicationForCustomer({
+      customerId: customer._id,
+      assignedAgentId: assignedAgentId || req.user.userId,
+      performedBy: req.user.id,
     });
 
     // await sendEmail(
@@ -190,8 +175,7 @@ export const getCustomerDetails = async (req, res) => {
   try {
     const customerId = req.params.id;
 
-    console.log('customerId', customerId);
-    
+    console.log("customerId", customerId);
 
     const customer = await Customer.findById(customerId).lean();
     if (!customer) {
@@ -258,9 +242,9 @@ export const getAdminDetails = async (req, res) => {
 export const getAllCustomers = async (req, res) => {
   try {
     const customers = await Customer.find({}).lean();
-    console.log('All customers in database:', customers.length);
-    console.log('Customers:', customers);
-    
+    console.log("All customers in database:", customers.length);
+    console.log("Customers:", customers);
+
     res.status(200).json({
       success: true,
       data: customers,

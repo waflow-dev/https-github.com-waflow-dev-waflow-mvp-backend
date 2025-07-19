@@ -1,7 +1,7 @@
 import mongoose from "mongoose";
 
 const stepSchema = new mongoose.Schema({
-  stepName: String,
+  stepName: { type: String, required: true },
   status: {
     type: String,
     enum: [

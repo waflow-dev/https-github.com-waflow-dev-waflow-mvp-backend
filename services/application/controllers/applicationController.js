@@ -9,35 +9,54 @@ export const autoApproveStepsIfDocsValid = async (customerId) => {
   const application = await Application.findOne({ customer: customerId });
   if (!application) return;
 
-  const customerDocs = await Document.find({
-    linkedTo: customerId,
+  const approvedDocs = await Document.find({
+    $or: [
+      { linkedTo: customerId, linkedModel: "Customer" },
+      { linkedTo: application._id, linkedModel: "Application" },
+    ],
     status: "Approved",
   });
 
-  const docTypesApproved = customerDocs.map((doc) => doc.documentType);
+  // Grouping by relatedStepName
+  const stepwiseDocs = {};
+  approvedDocs.forEach((doc) => {
+    if (!stepwiseDocs[doc.relatedStepName]) {
+      stepwiseDocs[doc.relatedStepName] = [];
+    }
+    stepwiseDocs[doc.relatedStepName].push(doc.documentType);
+  });
 
-  const stepsToUpdate = [];
+  let updated = false;
+  const updatedSteps = [];
 
   for (const step of application.steps) {
-    const requiredDocs = stepDocumentMap[step.stepName] || [];
-    const allApproved = requiredDocs.every((doc) =>
-      docTypesApproved.includes(doc)
-    );
+    const requiredByMap = stepDocumentMap[step.stepName] || [];
+    const relatedDocs = stepwiseDocs[step.stepName] || [];
 
-    if (requiredDocs.length > 0 && allApproved && step.status !== "Approved") {
+    const allApproved =
+      requiredByMap.length === 0 ||
+      requiredByMap.every((docType) => relatedDocs.includes(docType));
+
+    if (
+      allApproved &&
+      step.status !== "Approved" &&
+      (relatedDocs.length > 0 || requiredByMap.length > 0)
+    ) {
       step.status = "Approved";
       step.updatedAt = new Date();
-      stepsToUpdate.push(step.stepName);
+      updated = true;
+      updatedSteps.push(step.stepName);
     }
   }
 
-  if (stepsToUpdate.length > 0) {
+  if (updated) {
+    application.status = calculateApplicationStatus(application.steps);
     await application.save();
-    console.log(`✅ Auto-approved steps: ${stepsToUpdate.join(", ")}`);
+    console.log("✅ Auto-approved steps:", updatedSteps);
   }
 };
 
-// Helper: auto-update global status
+// Helper to calculate application status
 const calculateApplicationStatus = (steps) => {
   const total = steps.length;
   const approved = steps.filter((s) => s.status === "Approved").length;
@@ -52,17 +71,15 @@ const calculateApplicationStatus = (steps) => {
   return "Waiting for Agent Review";
 };
 
-// Controller: Create new application
 export const createApplication = async (req, res) => {
   const { customerId, assignedAgentId } = req.body;
 
   try {
-    // Check duplicate application
     const existing = await Application.findOne({ customer: customerId });
     if (existing) {
-      return res.status(400).json({
-        message: "Application already exists for this customer.",
-      });
+      return res
+        .status(400)
+        .json({ message: "Application already exists for this customer." });
     }
 
     const customer = await Customer.findById(customerId);
@@ -74,9 +91,9 @@ export const createApplication = async (req, res) => {
     const stepsFromConfig = workflowConfig[jurisdiction];
 
     if (!stepsFromConfig) {
-      return res.status(400).json({
-        message: "Jurisdiction-specific workflow not found.",
-      });
+      return res
+        .status(400)
+        .json({ message: "Workflow steps not defined for jurisdiction" });
     }
 
     const steps = stepsFromConfig.map((step) => ({
@@ -100,11 +117,11 @@ export const createApplication = async (req, res) => {
       details: { assignedAgent: assignedAgentId },
     });
 
-    res.status(201).json({
-      message: "Application created successfully",
-      application,
-    });
+    res
+      .status(201)
+      .json({ message: "Application created successfully", application });
   } catch (err) {
+    console.error("Application creation error:", err);
     res.status(500).json({
       message: "Server error while creating application",
       error: err.message,
@@ -320,39 +337,29 @@ export const updateOnboardingDetails = async (req, res) => {
   const { customerId } = req.params;
   const body = req.body;
 
-  console.log('customerId put: ', customerId);
-  
+  console.log("customerId put: ", customerId);
 
-  // Map frontend fields to backend model
   const updateFields = {
-    // Personal Details
-    firstName: body.customerName?.split(' ')[0] || '',
-    middleName: body.customerName?.split(' ')[1] || '',
-    lastName: body.customerName?.split(' ').slice(2).join(' ') || '',
+    firstName: body.customerName?.split(" ")[0] || "",
+    middleName: body.customerName?.split(" ")[1] || "",
+    lastName: body.customerName?.split(" ").slice(2).join(" ") || "",
     dob: body.dateOfBirth,
     email: body.emailAddress,
     phoneNumber: body.phoneNumber,
     nationality: body.nationality,
     gender: body.gender,
-    // Address
     permanentAddress: body.permanentAddress,
     currentAddress: body.localAddress,
     countryOfResidence: body.countryOfResidence,
-    // Passport & ID
-    // (Assume passportPhoto and localProof are handled as uploads elsewhere)
-    // Financials
     sourceOfFund: body.sourceOfFund,
     quotedPrice: body.quotedPrice,
     paymentDetails: body.paymentDetails,
-    // Company Details
     companyType: body.companyTypePreference,
     jurisdiction: body.companyJurisdiction,
-    businessActivity1: body.businessActivity[0] || '',
+    businessActivity1: body.businessActivity[0] || "",
     officeType: body.officeType,
-    // Investor Info
     numberOfInvestors: Number(body.numberOfInvestors) || 1,
     role: body.role,
-    // Optionally add more fields as needed
   };
 
   try {
@@ -366,11 +373,14 @@ export const updateOnboardingDetails = async (req, res) => {
       return res.status(404).json({ message: "Customer not found" });
     }
 
-    // update application status
+    // ✅ Update application status
     await Application.findOneAndUpdate(
       { customer: customerId },
       { status: "Waiting for Agent Review", sharedNote: null }
     );
+
+    // ✅ Optional Optimization: Trigger auto-approval after onboarding
+    await autoApproveStepsIfDocsValid(customerId);
 
     res.status(200).json({
       success: true,
@@ -464,41 +474,41 @@ export const getApplicationById = async (req, res) => {
 
 export const getAllApplications = async (req, res) => {
   try {
-    console.log('[DEBUG] getAllApplications called');
-    console.log('[DEBUG] req.user:', req.user);
-    
+    console.log("[DEBUG] getAllApplications called");
+    console.log("[DEBUG] req.user:", req.user);
+
     const { role, id: userId, userId: altUserId } = req.user;
-    console.log('[DEBUG] role:', role);
-    console.log('[DEBUG] userId:', userId);
-    console.log('[DEBUG] altUserId:', altUserId);
-    
+    console.log("[DEBUG] role:", role);
+    console.log("[DEBUG] userId:", userId);
+    console.log("[DEBUG] altUserId:", altUserId);
+
     let query = {};
-    
+
     // If user is an agent, only show applications assigned to them
-    if (role === 'agent') {
+    if (role === "agent") {
       // Use userId (matches assignedAgent in DB)
       const agentId = req.user.userId?.toString() || req.user.id?.toString();
-      console.log('[DEBUG] agentId for query:', agentId);
+      console.log("[DEBUG] agentId for query:", agentId);
       query.assignedAgent = agentId;
     }
     // If user is admin, show all applications
-    
-    console.log('[DEBUG] query:', query);
-    
+
+    console.log("[DEBUG] query:", query);
+
     const applications = await Application.find(query)
-      .populate('customer', 'firstName lastName email phoneNumber')
-      .populate('assignedAgent', 'fullName email')
+      .populate("customer", "firstName lastName email phoneNumber")
+      .populate("assignedAgent", "fullName email")
       .sort({ createdAt: -1 });
 
-    console.log('[DEBUG] Found applications:', applications.length);
-    console.log('[DEBUG] Applications:', applications);
+    console.log("[DEBUG] Found applications:", applications.length);
+    console.log("[DEBUG] Applications:", applications);
 
     res.status(200).json({
       success: true,
       data: applications,
     });
   } catch (error) {
-    console.error('[DEBUG] Error in getAllApplications:', error);
+    console.error("[DEBUG] Error in getAllApplications:", error);
     res.status(500).json({
       success: false,
       message: "Error fetching applications",

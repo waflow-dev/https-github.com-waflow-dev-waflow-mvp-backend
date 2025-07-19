@@ -15,7 +15,7 @@ const documentVaultSchema = new mongoose.Schema(
     // Related application step: e.g., "KYC & Background Check", "Visa Application"
     relatedStepName: {
       type: String,
-      required: true,
+      required: false,
     },
 
     linkedTo: {

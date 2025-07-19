@@ -46,10 +46,12 @@ export const createDocument = async (req, res) => {
       applicationId,
     } = req.body;
 
-    // Validate step name
-    const allSteps = [...new Set(Object.values(workflowConfig).flat())];
-    if (!allSteps.includes(relatedStepName)) {
-      return res.status(400).json({ message: "Invalid relatedStepName" });
+    // Validate step name only for application-linked documents
+    if (linkedModel === "Application" && relatedStepName) {
+      const allSteps = [...new Set(Object.values(workflowConfig).flat())];
+      if (!allSteps.includes(relatedStepName)) {
+        return res.status(400).json({ message: "Invalid relatedStepName" });
+      }
     }
 
     const linkedTo =
@@ -58,7 +60,7 @@ export const createDocument = async (req, res) => {
     const newDoc = await Document.create({
       documentName,
       documentType,
-      relatedStepName,
+      ...(relatedStepName && { relatedStepName }),
       linkedTo,
       linkedModel,
       fileUrl: uploadedFileUrl,

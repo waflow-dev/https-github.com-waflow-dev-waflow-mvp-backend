@@ -1,16 +1,18 @@
+// ✅ documentVaultModel.js — Supports documentType + relatedStepName logic for auto-approval
+
 import mongoose from "mongoose";
 
 const documentVaultSchema = new mongoose.Schema(
   {
     documentName: { type: String, required: true },
 
-    // e.g., "Passport", "MOA", "Lease"
+    // Type of document: e.g., "Passport", "MOA", "Lease", etc.
     documentType: {
       type: String,
       required: true,
     },
 
-    // e.g., "KYC & Background Check", "Visa Application"
+    // Related application step: e.g., "KYC & Background Check", "Visa Application"
     relatedStepName: {
       type: String,
       required: true,

@@ -46,13 +46,10 @@ export const createDocument = async (req, res) => {
       applicationId,
     } = req.body;
 
-    const allStepNames = [...new Set(Object.values(workflowConfig).flat())];
-    if (!allStepNames.includes(relatedStepName)) {
-      return res
-        .status(400)
-        .json({
-          message: "Invalid relatedStepName for any jurisdiction step.",
-        });
+    // Validate step name
+    const allSteps = [...new Set(Object.values(workflowConfig).flat())];
+    if (!allSteps.includes(relatedStepName)) {
+      return res.status(400).json({ message: "Invalid relatedStepName" });
     }
 
     const linkedTo =
@@ -71,7 +68,8 @@ export const createDocument = async (req, res) => {
       uploadedBy: user?.role || "unknown",
     });
 
-    if (applicationId && relatedStepName) {
+    // Update related step in Application
+    if (linkedModel === "Application" && applicationId && relatedStepName) {
       const application = await Application.findById(applicationId);
       if (application) {
         const step = application.steps.find(
@@ -125,7 +123,17 @@ export const updateDocumentStatus = async (req, res) => {
       return res.status(404).json({ message: "Document not found" });
     }
 
-    await autoApproveStepsIfDocsValid(updatedDoc.linkedTo);
+    // ✅ Auto-approve steps after document approval
+    if (status === "Approved") {
+      if (updatedDoc.linkedModel === "Customer") {
+        await autoApproveStepsIfDocsValid(updatedDoc.linkedTo);
+      } else if (updatedDoc.linkedModel === "Application") {
+        const application = await Application.findById(updatedDoc.linkedTo);
+        if (application) {
+          await autoApproveStepsIfDocsValid(application.customer);
+        }
+      }
+    }
 
     res.status(200).json({
       success: true,
@@ -141,6 +149,7 @@ export const updateDocumentStatus = async (req, res) => {
   }
 };
 
+// ✅ Retain: getCustomerDocuments
 export const getCustomerDocuments = async (req, res) => {
   const { customerId } = req.params;
   const { status, documentType } = req.query;
@@ -169,6 +178,7 @@ export const getCustomerDocuments = async (req, res) => {
   }
 };
 
+// ✅ Retain: getApplicationDocuments
 export const getApplicationDocuments = async (req, res) => {
   const { appId } = req.params;
   const { status, documentType } = req.query;
@@ -197,6 +207,7 @@ export const getApplicationDocuments = async (req, res) => {
   }
 };
 
+// ✅ Retain: serveDocumentFile
 export const serveDocumentFile = async (req, res) => {
   try {
     const doc = await Document.findById(req.params.id);
@@ -207,10 +218,8 @@ export const serveDocumentFile = async (req, res) => {
 
     const fileType = fileUrl.split(".").pop().toLowerCase();
 
-    // Fetch the file as a stream
     const response = await axios.get(fileUrl, { responseType: "stream" });
 
-    // Set CORS and content headers
     res.setHeader(
       "Access-Control-Allow-Origin",
       "https://waflow-frontend.vercel.app"

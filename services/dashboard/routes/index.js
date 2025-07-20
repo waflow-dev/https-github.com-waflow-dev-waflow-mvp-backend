@@ -7,6 +7,7 @@ import {
   getAgentDashboard,
   getCustomerDashboard,
   getCustomerDocuments,
+  listAllApplications,
 } from "../controllers/dashboardController.js";
 
 const router = express.Router();
@@ -35,6 +36,13 @@ router.get(
   authenticateToken,
   authorizeRoles("agent", "admin"),
   getCustomerDocuments
+);
+
+router.get(
+  "/debug/applications",
+  authenticateToken,
+  authorizeRoles("admin"),
+  listAllApplications
 );
 
 export default router;

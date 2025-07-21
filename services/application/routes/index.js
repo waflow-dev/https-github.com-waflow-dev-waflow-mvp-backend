@@ -11,10 +11,7 @@ import {
   updateOnboardingDetails,
   getApplicationById,
   getAllApplications,
-<<<<<<< HEAD
   showApplicationWithStatus,
-=======
->>>>>>> 21d562034f4ecbf0d74c5340bda336f1c71cc8e5
 } from "../controllers/applicationController.js";
 import {
   createVisaApplication,

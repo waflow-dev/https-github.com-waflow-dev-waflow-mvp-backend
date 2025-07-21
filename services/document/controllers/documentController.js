@@ -2,7 +2,7 @@ import Document from "../models/documentVaultModel.js";
 import Application from "../../application/models/applicationModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import { autoApproveStepsIfDocsValid } from "../../application/controllers/applicationController.js";
-import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { uploadToCloudinaryFromBuffer } from "../utils/cloudinary.js";
 import workflowConfig from "../../application/utils/workflowConfig.js";
 import axios from "axios";
 
@@ -30,7 +30,12 @@ export const createDocument = async (req, res) => {
   }
 
   try {
-    const cloudinaryResult = await uploadOnCloudinary(file.path);
+    const ext = file.originalname.split(".").pop().toLowerCase();
+    const cloudinaryResult = await uploadToCloudinaryFromBuffer(
+      file.buffer,
+      ext
+    );
+    // const cloudinaryResult = await uploadOnCloudinary(file.path);
     const uploadedFileUrl =
       cloudinaryResult?.secure_url || cloudinaryResult?.url;
     if (!uploadedFileUrl)
@@ -70,15 +75,15 @@ export const createDocument = async (req, res) => {
     });
 
     // --- NEW LOGIC: If this is the first document for the application, update Application status ---
-    if (linkedModel === 'Application' && applicationId) {
+    if (linkedModel === "Application" && applicationId) {
       const docCount = await Document.countDocuments({
-        linkedModel: 'Application',
-        linkedTo: applicationId
+        linkedModel: "Application",
+        linkedTo: applicationId,
       });
       if (docCount === 1) {
         const app = await Application.findById(applicationId);
-        if (app && app.status === 'New') {
-          app.status = 'Submitted for Review';
+        if (app && app.status === "New") {
+          app.status = "Submitted for Review";
           await app.save();
         }
       }
@@ -268,6 +273,12 @@ export const addDocumentNote = async (req, res) => {
 
     res.status(200).json({ success: true, notes: doc.notes });
   } catch (err) {
-    res.status(500).json({ success: false, message: "Failed to add note", error: err.message });
+    res
+      .status(500)
+      .json({
+        success: false,
+        message: "Failed to add note",
+        error: err.message,
+      });
   }
 };

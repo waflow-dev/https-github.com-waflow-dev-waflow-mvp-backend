@@ -10,30 +10,46 @@ cloudinary.config({
   api_secret: process.env.API_SECRET,
 });
 
-export const uploadOnCloudinary = async (localFilePath) => {
-  let response = null;
-  try {
-    if (!localFilePath) {
-      throw new Error("Local file path is required");
-    }
-    // Detect file type
-    const isPDF = localFilePath.toLowerCase().endsWith(".pdf");
-    response = await cloudinary.uploader.upload(localFilePath, {
-      resource_type: isPDF ? "raw" : "auto", // Use 'raw' for PDFs, 'auto' for images
-    });
-    console.log("File uploaded to Cloudinary:", response.url);
-    return response;
-  } catch (error) {
-    console.error("Cloudinary upload error:", error.message);
-    return null;
-  } finally {
-    if (localFilePath) {
-      try {
-        fs.unlinkSync(localFilePath);
-        console.log("Temporary file deleted:", localFilePath);
-      } catch (unlinkError) {
-        console.error("Error deleting temporary file:", unlinkError.message);
+// export const uploadOnCloudinary = async (localFilePath) => {
+//   let response = null;
+//   try {
+//     if (!localFilePath) {
+//       throw new Error("Local file path is required");
+//     }
+//     // Detect file type
+//     const isPDF = localFilePath.toLowerCase().endsWith(".pdf");
+//     response = await cloudinary.uploader.upload(localFilePath, {
+//       resource_type: isPDF ? "raw" : "auto", // Use 'raw' for PDFs, 'auto' for images
+//     });
+//     console.log("File uploaded to Cloudinary:", response.url);
+//     return response;
+//   } catch (error) {
+//     console.error("Cloudinary upload error:", error.message);
+//     return null;
+//   } finally {
+//     if (localFilePath) {
+//       try {
+//         fs.unlinkSync(localFilePath);
+//         console.log("Temporary file deleted:", localFilePath);
+//       } catch (unlinkError) {
+//         console.error("Error deleting temporary file:", unlinkError.message);
+//       }
+//     }
+//   }
+// };
+
+export const uploadToCloudinaryFromBuffer = (buffer, fileFormat) => {
+  return new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      {
+        resource_type: "auto",
+        format: fileFormat,
+      },
+      (error, result) => {
+        if (error) return reject(error);
+        resolve(result);
       }
-    }
-  }
+    );
+    stream.end(buffer);
+  });
 };

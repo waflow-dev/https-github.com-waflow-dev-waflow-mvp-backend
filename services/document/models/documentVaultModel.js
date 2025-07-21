@@ -15,7 +15,7 @@ const documentVaultSchema = new mongoose.Schema(
     // Related application step: e.g., "KYC & Background Check", "Visa Application"
     relatedStepName: {
       type: String,
-      required: true,
+      required: false,
     },
 
     linkedTo: {
@@ -46,7 +46,14 @@ const documentVaultSchema = new mongoose.Schema(
 
     uploadedBy: String,
     expiryDate: Date,
-    notes: String,
+    notes: [
+      {
+        message: String,
+        addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Auth" },
+        addedByRole: { type: String, enum: ["agent", "admin", "customer"] },
+        timestamp: { type: Date, default: Date.now },
+      }
+    ],
   },
   { timestamps: true }
 );

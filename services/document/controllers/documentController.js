@@ -46,10 +46,12 @@ export const createDocument = async (req, res) => {
       applicationId,
     } = req.body;
 
-    // Validate step name
-    const allSteps = [...new Set(Object.values(workflowConfig).flat())];
-    if (!allSteps.includes(relatedStepName)) {
-      return res.status(400).json({ message: "Invalid relatedStepName" });
+    // Validate step name only for application-linked documents
+    if (linkedModel === "Application" && relatedStepName) {
+      const allSteps = [...new Set(Object.values(workflowConfig).flat())];
+      if (!allSteps.includes(relatedStepName)) {
+        return res.status(400).json({ message: "Invalid relatedStepName" });
+      }
     }
 
     const linkedTo =
@@ -58,18 +60,32 @@ export const createDocument = async (req, res) => {
     const newDoc = await Document.create({
       documentName,
       documentType,
-      relatedStepName,
+      ...(relatedStepName && { relatedStepName }),
       linkedTo,
       linkedModel,
       fileUrl: uploadedFileUrl,
       userId: user?.userId,
       expiryDate,
       notes,
-      uploadedBy: user?.role || "unknown",
     });
 
-    // Update related step in Application
-    if (linkedModel === "Application" && applicationId && relatedStepName) {
+    // --- NEW LOGIC: If this is the first document for the application, update Application status ---
+    if (linkedModel === 'Application' && applicationId) {
+      const docCount = await Document.countDocuments({
+        linkedModel: 'Application',
+        linkedTo: applicationId
+      });
+      if (docCount === 1) {
+        const app = await Application.findById(applicationId);
+        if (app && app.status === 'New') {
+          app.status = 'Submitted for Review';
+          await app.save();
+        }
+      }
+    }
+    // --- END NEW LOGIC ---
+
+    if (applicationId && relatedStepName) {
       const application = await Application.findById(applicationId);
       if (application) {
         const step = application.steps.find(
@@ -233,5 +249,25 @@ export const serveDocumentFile = async (req, res) => {
   } catch (err) {
     console.error("Error serving file:", err);
     res.status(500).send("Error serving file: " + (err?.message || err));
+  }
+};
+
+export const addDocumentNote = async (req, res) => {
+  const { id } = req.params;
+  const { message } = req.body;
+  const addedBy = req.user.id;
+  const addedByRole = req.user.role;
+
+  try {
+    const doc = await Document.findById(id);
+    if (!doc) return res.status(404).json({ message: "Document not found" });
+
+    if (!doc.notes) doc.notes = [];
+    doc.notes.push({ message, addedBy, addedByRole, timestamp: new Date() });
+    await doc.save();
+
+    res.status(200).json({ success: true, notes: doc.notes });
+  } catch (err) {
+    res.status(500).json({ success: false, message: "Failed to add note", error: err.message });
   }
 };

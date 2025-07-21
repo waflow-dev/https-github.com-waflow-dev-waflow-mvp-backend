@@ -11,10 +11,7 @@ import {
   updateOnboardingDetails,
   getApplicationById,
   getAllApplications,
-<<<<<<< HEAD
   showApplicationWithStatus,
-=======
->>>>>>> 21d562034f4ecbf0d74c5340bda336f1c71cc8e5
 } from "../controllers/applicationController.js";
 import {
   createVisaApplication,
@@ -41,6 +38,14 @@ router.post(
   createApplication
 );
 
+// Update application step status — agent/admin/customer
+router.patch(
+  "/stepStatus/:customerId",
+  authenticateToken,
+  authorizeRoles("agent", "admin", "customer"),
+  updateStepStatus
+);
+
 // Update workflow step status — agent/admin
 router.patch(
   "/step/:appId",
@@ -50,7 +55,7 @@ router.patch(
 );
 
 // Add note for clarification
-router.post("/note/:appId", authenticateToken, addNote);
+router.post("/note/:customerId", authenticateToken, addNote);
 
 // Update visa substep status — agent/admin
 router.patch(

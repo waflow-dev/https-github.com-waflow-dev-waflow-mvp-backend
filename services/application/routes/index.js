@@ -38,6 +38,14 @@ router.post(
   createApplication
 );
 
+// Update application step status — agent/admin/customer
+router.patch(
+  "/stepStatus/:customerId",
+  authenticateToken,
+  authorizeRoles("agent", "admin", "customer"),
+  updateStepStatus
+);
+
 // Update workflow step status — agent/admin
 router.patch(
   "/step/:appId",
@@ -47,7 +55,7 @@ router.patch(
 );
 
 // Add note for clarification
-router.post("/note/:appId", authenticateToken, addNote);
+router.post("/note/:customerId", authenticateToken, addNote);
 
 // Update visa substep status — agent/admin
 router.patch(

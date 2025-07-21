@@ -131,11 +131,11 @@ export const createApplication = async (req, res) => {
 
 // PATCH: update step status
 export const updateStepStatus = async (req, res) => {
-  const { appId } = req.params;
+  const { customerId } = req.params;
   const { stepName, status } = req.body;
 
   try {
-    const application = await Application.findById(appId);
+    const application = await Application.findOne({ customer: customerId });
     if (!application)
       return res.status(404).json({ message: "Application not found" });
 
@@ -160,7 +160,7 @@ export const updateStepStatus = async (req, res) => {
       action: "step_status_updated",
       performedBy: req.user.id,
       details: {
-        applicationId: appId,
+        customer: customerId,
         step: stepName,
         newStatus: updatedStatus,
       },
@@ -179,18 +179,18 @@ export const updateStepStatus = async (req, res) => {
 };
 
 export const addNote = async (req, res) => {
-  const { appId } = req.params;
-  const { message, addedBy } = req.body;
+  const { customerId } = req.params;
+  const { message } = req.body;
 
   try {
-    const application = await Application.findById(appId);
+    const application = await Application.findOne({ customer: customerId });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
 
     application.notes.push({
       message,
-      addedBy,
+      addedBy: customerId,
       timestamp: new Date(),
     });
 
@@ -448,6 +448,10 @@ export const reviewApplication = async (req, res) => {
 export const getApplicationById = async (req, res) => {
   const { appId } = req.params;
 
+  const user = req.user;
+
+  console.log("Fetching application for user:", user);
+
   try {
     const application = await Application.findById(appId)
       .populate("customer")
@@ -474,13 +478,7 @@ export const getApplicationById = async (req, res) => {
 
 export const getAllApplications = async (req, res) => {
   try {
-    console.log("[DEBUG] getAllApplications called");
-    console.log("[DEBUG] req.user:", req.user);
-
     const { role, id: userId, userId: altUserId } = req.user;
-    console.log("[DEBUG] role:", role);
-    console.log("[DEBUG] userId:", userId);
-    console.log("[DEBUG] altUserId:", altUserId);
 
     let query = {};
 
@@ -488,20 +486,13 @@ export const getAllApplications = async (req, res) => {
     if (role === "agent") {
       // Use userId (matches assignedAgent in DB)
       const agentId = req.user.userId?.toString() || req.user.id?.toString();
-      console.log("[DEBUG] agentId for query:", agentId);
       query.assignedAgent = agentId;
     }
     // If user is admin, show all applications
-
-    console.log("[DEBUG] query:", query);
-
     const applications = await Application.find(query)
       .populate("customer", "firstName lastName email phoneNumber")
       .populate("assignedAgent", "fullName email")
       .sort({ createdAt: -1 });
-
-    console.log("[DEBUG] Found applications:", applications.length);
-    console.log("[DEBUG] Applications:", applications);
 
     res.status(200).json({
       success: true,

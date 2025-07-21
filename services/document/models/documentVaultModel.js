@@ -42,6 +42,7 @@ const documentVaultSchema = new mongoose.Schema(
       enum: ["Pending", "Approved", "Rejected"],
       default: "Pending",
     },
+    notes: { type: String },
 
     uploadedBy: String,
     expiryDate: Date,

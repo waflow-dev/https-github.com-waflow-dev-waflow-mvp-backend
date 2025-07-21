@@ -10,7 +10,8 @@ import {
   reviewApplication,
   updateOnboardingDetails,
   getApplicationById,
-  getAllApplications
+  getAllApplications,
+  showApplicationWithStatus,
 } from "../controllers/applicationController.js";
 
 const router = express.Router();
@@ -39,13 +40,8 @@ router.patch(
   updateStepStatus
 );
 
-// Add note for clarification — agent/admin
-router.post(
-  "/note/:appId",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  addNote
-);
+// Add note for clarification
+router.post("/note/:appId", authenticateToken, addNote);
 
 // Update visa substep status — agent/admin
 router.patch(
@@ -56,12 +52,7 @@ router.patch(
 );
 
 // Add visa applicant — agent/admin
-router.post(
-  "/visa-member/:appId",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  addVisaMember
-);
+router.post("/visa-member/:appId", addVisaMember);
 
 // Review application — agent/admin
 router.post(
@@ -80,5 +71,7 @@ router.put(
 );
 
 router.get("/:appId", authenticateToken, getApplicationById);
+
+router.get("/status/:customerId", authenticateToken, showApplicationWithStatus);
 
 export default router;

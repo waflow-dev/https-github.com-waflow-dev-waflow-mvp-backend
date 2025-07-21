@@ -180,7 +180,7 @@ export const updateStepStatus = async (req, res) => {
 
 export const addNote = async (req, res) => {
   const { appId } = req.params;
-  const { message, addedBy } = req.body; // addedBy = agent ID
+  const { message, addedBy } = req.body;
 
   try {
     const application = await Application.findById(appId);
@@ -513,6 +513,68 @@ export const getAllApplications = async (req, res) => {
       success: false,
       message: "Error fetching applications",
       error: error.message,
+    });
+  }
+};
+
+export const showApplicationWithStatus = async (req, res) => {
+  const { customerId } = req.params;
+
+  try {
+    const customer = await Customer.findById(customerId).lean();
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    const application = await Application.findOne({
+      customer: customerId,
+    }).lean();
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // Get all documents uploaded by this customer
+    const documents = await Document.find({
+      linkedTo: customerId,
+      linkedModel: "Customer",
+    }).lean();
+
+    // Attach documents to their related steps
+    const stepDetails = application.steps.map((step) => {
+      const stepDocs = documents.filter(
+        (doc) => doc.relatedStepName === step.stepName
+      );
+      return {
+        stepName: step.stepName,
+        status: step.status,
+        updatedAt: step.updatedAt,
+        documents: stepDocs.map((doc) => ({
+          documentName: doc.documentName,
+          documentType: doc.documentType,
+          status: doc.status,
+          fileUrl: doc.fileUrl,
+          expiryDate: doc.expiryDate,
+        })),
+      };
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Application status fetched successfully",
+      data: {
+        applicationId: application._id,
+        customerId,
+        customerName: `${customer.firstName} ${customer.lastName}`,
+        status: application.status,
+        steps: stepDetails,
+      },
+    });
+  } catch (err) {
+    console.error("Error fetching application status:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch application status",
+      error: err.message,
     });
   }
 };

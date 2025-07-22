@@ -56,7 +56,7 @@ export const autoApproveStepsIfDocsValid = async (customerId) => {
   }
 };
 
-// Helper to calculate application status
+// ✅ FINAL VERSION — Shared across all controllers
 const calculateApplicationStatus = (steps) => {
   const total = steps.length;
   const approved = steps.filter((s) => s.status === "Approved").length;
@@ -66,7 +66,10 @@ const calculateApplicationStatus = (steps) => {
   if (rejected) return "Rejected";
   if (approved === total) return "Completed";
   if (submitted || approved > 0) return "In Progress";
-  return "Ready for Processing";
+  if (steps.every((s) => s.status === "Not Started"))
+    return "Ready for Processing";
+
+  return "Waiting for Agent Review";
 };
 
 export const createApplication = async (req, res) => {

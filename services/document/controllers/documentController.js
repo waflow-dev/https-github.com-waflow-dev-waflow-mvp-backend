@@ -6,18 +6,19 @@ import { uploadToCloudinaryFromBuffer } from "../utils/cloudinary.js";
 import workflowConfig from "../../application/utils/workflowConfig.js";
 import axios from "axios";
 
-// Helper: auto-update global status
+// ✅ FINAL VERSION — Shared across all controllers
 const calculateApplicationStatus = (steps) => {
   const total = steps.length;
   const approved = steps.filter((s) => s.status === "Approved").length;
-  const started = steps.some((s) => s.status === "Started");
-  const declined = steps.some((s) => s.status === "Declined");
+  const rejected = steps.some((s) => s.status === "Rejected");
+  const submitted = steps.some((s) => s.status === "Submitted for Review");
 
-  if (declined) return "Rejected";
+  if (rejected) return "Rejected";
   if (approved === total) return "Completed";
-  if (started) return "In Progress";
+  if (submitted || approved > 0) return "In Progress";
   if (steps.every((s) => s.status === "Not Started"))
     return "Ready for Processing";
+
   return "Waiting for Agent Review";
 };
 
@@ -142,6 +143,28 @@ export const updateDocumentStatus = async (req, res) => {
 
     if (!updatedDoc) {
       return res.status(404).json({ message: "Document not found" });
+    }
+
+    // 👇 Manually reject step if a document is rejected
+    if (status === "Rejected" && updatedDoc.relatedStepName) {
+      const appId =
+        updatedDoc.linkedModel === "Application"
+          ? updatedDoc.linkedTo
+          : (await Application.findOne({ customer: updatedDoc.linkedTo }))?._id;
+
+      if (appId) {
+        const application = await Application.findById(appId);
+        const step = application?.steps.find(
+          (s) => s.stepName === updatedDoc.relatedStepName
+        );
+
+        if (step && step.status !== "Approved") {
+          step.status = "Rejected";
+          step.updatedAt = new Date();
+          application.status = calculateApplicationStatus(application.steps);
+          await application.save();
+        }
+      }
     }
 
     // ✅ Auto-approve steps after document approval

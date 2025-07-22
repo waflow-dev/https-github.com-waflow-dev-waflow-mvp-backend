@@ -60,17 +60,13 @@ export const autoApproveStepsIfDocsValid = async (customerId) => {
 const calculateApplicationStatus = (steps) => {
   const total = steps.length;
   const approved = steps.filter((s) => s.status === "Approved").length;
-  const submitted = steps.some((s) => s.status === "Submitted for Review");
-  const started = steps.some((s) => s.status === "Started");
-  const declined = steps.some((s) => s.status === "Declined");
   const rejected = steps.some((s) => s.status === "Rejected");
+  const submitted = steps.some((s) => s.status === "Submitted for Review");
 
-  if (rejected || declined) return "Rejected";
+  if (rejected) return "Rejected";
   if (approved === total) return "Completed";
-  if (submitted || started) return "In Progress";
-  if (steps.every((s) => s.status === "Not Started"))
-    return "Ready for Processing";
-  return "Waiting for Agent Review";
+  if (submitted || approved > 0) return "In Progress";
+  return "Ready for Processing";
 };
 
 export const createApplication = async (req, res) => {

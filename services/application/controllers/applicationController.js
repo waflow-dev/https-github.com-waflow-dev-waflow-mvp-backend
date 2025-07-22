@@ -476,6 +476,37 @@ export const getApplicationById = async (req, res) => {
   }
 };
 
+export const getApplicationByCustomerId = async (req, res) => {
+  const { customerId } = req.params;
+
+  const user = req.user;
+
+  console.log("Fetching application for user:", user);
+
+  try {
+    const application = await Application.findOne({ customer: customerId })
+      .populate("customer")
+      .populate("assignedAgent")
+      .populate("visaSubSteps.memberId")
+      .populate("notes.addedBy");
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      data: application,
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching application",
+      error: err.message,
+    });
+  }
+};
+
 export const getAllApplications = async (req, res) => {
   try {
     const { role, id: userId, userId: altUserId } = req.user;

@@ -273,12 +273,10 @@ export const addDocumentNote = async (req, res) => {
 
     res.status(200).json({ success: true, notes: doc.notes });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Failed to add note",
-        error: err.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Failed to add note",
+      error: err.message,
+    });
   }
 };

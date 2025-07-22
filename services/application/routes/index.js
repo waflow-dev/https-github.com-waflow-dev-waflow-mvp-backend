@@ -12,6 +12,7 @@ import {
   getApplicationById,
   getAllApplications,
   showApplicationWithStatus,
+  getApplicationByCustomerId,
 } from "../controllers/applicationController.js";
 import {
   createVisaApplication,
@@ -29,6 +30,8 @@ router.get(
   authorizeRoles("agent", "admin"),
   getAllApplications
 );
+
+router.get("/app/:customerId", authenticateToken, getApplicationByCustomerId);
 
 // Create a new application — allowed for agent/admin/customer
 router.post(

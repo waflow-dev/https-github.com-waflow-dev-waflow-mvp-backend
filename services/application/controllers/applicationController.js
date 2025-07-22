@@ -60,12 +60,14 @@ export const autoApproveStepsIfDocsValid = async (customerId) => {
 const calculateApplicationStatus = (steps) => {
   const total = steps.length;
   const approved = steps.filter((s) => s.status === "Approved").length;
+  const submitted = steps.some((s) => s.status === "Submitted for Review");
   const started = steps.some((s) => s.status === "Started");
   const declined = steps.some((s) => s.status === "Declined");
+  const rejected = steps.some((s) => s.status === "Rejected");
 
-  if (declined) return "Rejected";
+  if (rejected || declined) return "Rejected";
   if (approved === total) return "Completed";
-  if (started) return "In Progress";
+  if (submitted || started) return "In Progress";
   if (steps.every((s) => s.status === "Not Started"))
     return "Ready for Processing";
   return "Waiting for Agent Review";
@@ -382,10 +384,13 @@ export const updateOnboardingDetails = async (req, res) => {
     // ✅ Optional Optimization: Trigger auto-approval after onboarding
     await autoApproveStepsIfDocsValid(customerId);
 
+    const updatedApp = await Application.findOne({ customer: customerId });
+
     res.status(200).json({
       success: true,
       message: "Onboarding details submitted successfully",
       data: customer,
+      applicationStatus: updatedApp?.status || "Waiting for Agent Review",
     });
   } catch (err) {
     res.status(500).json({
@@ -596,6 +601,63 @@ export const showApplicationWithStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch application status",
+      error: err.message,
+    });
+  }
+};
+
+export const reviewApplicationAfterOnboarding = async (req, res) => {
+  const { applicationId } = req.params;
+  const { decision, note } = req.body; // decision = "approve" or "clarify"
+
+  try {
+    // Validate input
+    if (!["approve", "clarify"].includes(decision)) {
+      return res.status(400).json({ message: "Invalid decision type" });
+    }
+
+    const application = await Application.findById(applicationId);
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // Determine status change
+    application.status =
+      decision === "approve"
+        ? "Ready for Processing"
+        : "Awaiting Client Response";
+
+    // Store note if clarification requested
+    if (decision === "clarify") {
+      application.sharedNote = note || "Agent requested clarification.";
+    }
+
+    await application.save();
+
+    await logAction({
+      type: "application",
+      action: "review_after_onboarding",
+      performedBy: req.user.id,
+      details: {
+        applicationId,
+        newStatus: application.status,
+        note: decision === "clarify" ? note : undefined,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message:
+        decision === "approve"
+          ? "Application marked as Ready for Processing"
+          : "Clarification requested from customer",
+      applicationStatus: application.status,
+    });
+  } catch (err) {
+    console.error("Review error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error reviewing application",
       error: err.message,
     });
   }

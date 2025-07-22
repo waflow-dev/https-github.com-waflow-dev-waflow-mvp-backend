@@ -13,6 +13,7 @@ import {
   getAllApplications,
   showApplicationWithStatus,
   getApplicationByCustomerId,
+  reviewApplicationAfterOnboarding,
 } from "../controllers/applicationController.js";
 import {
   createVisaApplication,
@@ -115,6 +116,13 @@ router.patch(
   authenticateToken,
   authorizeRoles("agent", "admin"),
   approveVisaApplication
+);
+
+router.patch(
+  "/review-after-onboarding/:applicationId",
+  authenticateToken,
+  authorizeRoles("agent", "admin"),
+  reviewApplicationAfterOnboarding
 );
 
 router.get("/:appId", authenticateToken, getApplicationById);

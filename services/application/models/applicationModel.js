@@ -19,7 +19,7 @@ const stepSchema = new mongoose.Schema({
 });
 
 const visaSubStepSchema = new mongoose.Schema({
-  memberId: { String },
+  // memberId: { type: String },
   status: {
     type: String,
     enum: ["Submitted for Review", "Approved", "Rejected"],

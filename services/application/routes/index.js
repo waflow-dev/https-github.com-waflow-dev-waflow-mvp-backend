@@ -62,7 +62,7 @@ router.patch(
 // Add note for clarification
 router.post("/note/:customerId", authenticateToken, addNote);
 
-router.post("/visa-member/:appId", addVisaMember);
+router.post("/visa-member/:cutomerId", addVisaMember);
 
 // Update visa substep status — agent/admin
 router.patch(

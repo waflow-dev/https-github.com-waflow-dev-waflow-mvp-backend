@@ -210,18 +210,18 @@ export const addNote = async (req, res) => {
 };
 
 export const addVisaMember = async (req, res) => {
-  const { appId } = req.params;
+  const { cutomerId } = req.params;
   const { memberId } = req.body;
 
   try {
-    const application = await Application.findById(appId);
+    const application = await Application.findOne({ customer: cutomerId });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
 
     // Prevent duplicate member entries
     const exists = application.visaSubSteps.find(
-      (v) => v.memberId.toString() === memberId
+      (v) => v.memberId && v.memberId.toString() === memberId
     );
     if (exists) {
       return res.status(400).json({ message: "Member already added" });
@@ -469,7 +469,7 @@ export const getApplicationByCustomerId = async (req, res) => {
     const application = await Application.findOne({ customer: customerId })
       .populate("customer")
       .populate("assignedAgent")
-      .populate("visaSubSteps.memberId")
+      .populate("visaSubSteps")
       .populate("notes.addedBy");
 
     if (!application) {

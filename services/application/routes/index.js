@@ -19,6 +19,7 @@ import {
   getAllVisaApplications,
   getVisaApplicationById,
   approveVisaApplication,
+  getVisaApplicationsForCustomer,
 } from "../controllers/visaApplicationController.js";
 
 const router = express.Router();
@@ -115,6 +116,13 @@ router.patch(
   authenticateToken,
   authorizeRoles("agent", "admin"),
   approveVisaApplication
+);
+
+router.get(
+  "/visa/customer/:customerId",
+  authenticateToken,
+  authorizeRoles("customer", "admin"),
+  getVisaApplicationsForCustomer
 );
 
 router.get("/:appId", authenticateToken, getApplicationById);

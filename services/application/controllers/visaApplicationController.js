@@ -2,37 +2,56 @@ import VisaApplication from "../models/visaApplicationModel.js";
 import Application from "../models/applicationModel.js";
 import Customer from "../../user/models/customerModel.js";
 import DocumentVault from "../../document/models/documentVaultModel.js";
+import mongoose from "mongoose";
 
 // Customer submits a new visa application
 export const createVisaApplication = async (req, res) => {
+  const user = req.user;
+
   try {
-    console.log("[DEBUG] VisaApplication request body:", req.body);
-    const { applicationId, customerId, members, documentIds } = req.body;
-    // Use customerId from body if present, else from req.user
+    const { customerId, members, documentIds } = req.body;
+    // Validate memberId and documents
+    if (
+      !members ||
+      !Array.isArray(members) ||
+      members.length === 0 ||
+      !members[0].memberId
+    ) {
+      return res.status(400).json({ message: "memberId is required" });
+    }
+    // Validate memberId is a valid ObjectId
+    if (!mongoose.Types.ObjectId.isValid(members[0].memberId)) {
+      return res
+        .status(400)
+        .json({ message: "memberId must be a valid ObjectId" });
+    }
+    if (
+      !documentIds ||
+      !Array.isArray(documentIds) ||
+      documentIds.length !== 3
+    ) {
+      return res
+        .status(400)
+        .json({ message: "Exactly three documents are required" });
+    }
     const customer = await Customer.findById(customerId || req.user.userId);
     if (!customer)
       return res.status(404).json({ message: "Customer not found" });
-    let application = null;
-    if (applicationId) {
-      application = await Application.findById(applicationId);
-      if (!application)
-        return res.status(404).json({ message: "Application not found" });
-    }
     // Create visa application
     const visaApp = await VisaApplication.create({
-      ...(applicationId ? { application: applicationId } : {}),
-      customer: customer._id,
-      members,
+      customer: user.userId,
+      members: members.map((m) => ({ memberId: m.memberId })),
       documents: documentIds,
       status: "Submitted",
     });
     res.status(201).json({ success: true, data: visaApp });
   } catch (err) {
-    console.error("[DEBUG] Error creating visa application:", err);
+    console.error("[VisaApp] Error:", err);
     res.status(500).json({
       success: false,
       message: "Error creating visa application",
       error: err.message,
+      stack: err.stack,
     });
   }
 };
@@ -94,6 +113,32 @@ export const approveVisaApplication = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error updating visa application",
+      error: err.message,
+    });
+  }
+};
+
+// Customer fetches their own visa applications
+export const getVisaApplicationsForCustomer = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    // Only allow if the requester is the customer or an admin
+    if (
+      req.user.role !== "admin" &&
+      req.user.userId?.toString() !== customerId &&
+      req.user.id?.toString() !== customerId
+    ) {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+    const visaApps = await VisaApplication.find({ customer: customerId })
+      .populate("application")
+      .populate("customer")
+      .populate("documents");
+    res.status(200).json({ success: true, data: visaApps });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Error fetching visa applications for customer",
       error: err.message,
     });
   }

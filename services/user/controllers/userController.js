@@ -257,3 +257,15 @@ export const getAllCustomers = async (req, res) => {
     });
   }
 };
+
+export const getAllAgents = async (req, res) => {
+  try {
+    const agents = await Agent.find().lean();
+    res.status(200).json({ data: agents });
+  } catch (error) {
+    res.status(500).json({
+      message: "Error fetching agents",
+      error: error.message,
+    });
+  }
+};

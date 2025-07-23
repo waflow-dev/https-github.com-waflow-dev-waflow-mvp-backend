@@ -1,14 +1,11 @@
 import mongoose from "mongoose";
 
 const visaMemberSchema = new mongoose.Schema({
-  firstName: { type: String, required: true },
-  lastName: { type: String, required: true },
-  passportNumber: { type: String, required: true },
-  nationality: { type: String, required: true },
-  dob: { type: Date },
-  emiratesId: { type: String },
-  relationship: { type: String },
-  // Add more fields as needed
+  memberId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Customer",
+    required: true,
+  },
 });
 
 const visaApplicationSchema = new mongoose.Schema(

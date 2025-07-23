@@ -37,6 +37,8 @@ const documentVaultSchema = new mongoose.Schema(
       ref: "Auth",
     },
 
+    memberId: { String },
+
     status: {
       type: String,
       enum: ["Pending", "Approved", "Rejected"],
@@ -52,7 +54,7 @@ const documentVaultSchema = new mongoose.Schema(
         addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Auth" },
         addedByRole: { type: String, enum: ["agent", "admin", "customer"] },
         timestamp: { type: Date, default: Date.now },
-      }
+      },
     ],
   },
   { timestamps: true }

@@ -5,6 +5,7 @@ import { autoApproveStepsIfDocsValid } from "../../application/controllers/appli
 import { uploadToCloudinaryFromBuffer } from "../utils/cloudinary.js";
 import workflowConfig from "../../application/utils/workflowConfig.js";
 import axios from "axios";
+import mongoose from "mongoose";
 
 // ✅ FINAL VERSION — Shared across all controllers
 const calculateApplicationStatus = (steps) => {
@@ -50,6 +51,7 @@ export const createDocument = async (req, res) => {
       expiryDate,
       notes,
       applicationId,
+      memberId,
     } = req.body;
 
     // Validate step name only for application-linked documents
@@ -73,6 +75,7 @@ export const createDocument = async (req, res) => {
       userId: user?.userId,
       expiryDate,
       notes,
+      memberId,
     });
 
     // --- NEW LOGIC: If this is the first document for the application, update Application status ---
@@ -197,6 +200,14 @@ export const updateDocumentStatus = async (req, res) => {
 export const getCustomerDocuments = async (req, res) => {
   const { customerId } = req.params;
   const { status, documentType } = req.query;
+
+  // Validate customerId is a valid ObjectId and not the string 'status'
+  if (customerId === "status" || !mongoose.Types.ObjectId.isValid(customerId)) {
+    return res.status(400).json({
+      success: false,
+      message: "Invalid customerId",
+    });
+  }
 
   try {
     const filter = {

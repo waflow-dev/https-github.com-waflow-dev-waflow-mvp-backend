@@ -54,7 +54,7 @@ router.patch(
 
 // Update workflow step status — agent/admin
 router.patch(
-  "/step/:appId",
+  "/step/:customerId",
   authenticateToken,
   authorizeRoles("agent", "admin"),
   updateStepStatus
@@ -72,6 +72,7 @@ router.patch(
   // authorizeRoles("agent", "admin"),
   updateVisaMemberStatus
 );
+router.get("/status/:customerId", authenticateToken, showApplicationWithStatus);
 
 router.get("/:customerId/:memberId", getVisaMemberDocuments);
 

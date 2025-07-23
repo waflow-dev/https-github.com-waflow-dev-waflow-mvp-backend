@@ -47,10 +47,7 @@ router.get(
   authorizeRoles("agent", "admin"),
   getApplicationDocuments
 );
-router.get(
-  "/file/:id",
-  serveDocumentFile
-);
+router.get("/file/:id", serveDocumentFile);
 
 // Add required documents endpoint
 router.get(

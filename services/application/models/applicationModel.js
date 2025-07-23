@@ -12,6 +12,7 @@ const stepSchema = new mongoose.Schema({
       "Approved",
       "Declined",
       "Skipped",
+      "Awaiting Client Response",
     ],
     default: "Not Started",
   },
@@ -19,7 +20,7 @@ const stepSchema = new mongoose.Schema({
 });
 
 const visaSubStepSchema = new mongoose.Schema({
-  // memberId: { type: String },
+  memberId: { type: String },
   status: {
     type: String,
     enum: ["Submitted for Review", "Approved", "Rejected"],
@@ -47,6 +48,7 @@ const applicationSchema = new mongoose.Schema(
         "In Progress",
         "Completed",
         "Rejected",
+        "Awaiting Client Response",
       ],
       default: "New",
     },

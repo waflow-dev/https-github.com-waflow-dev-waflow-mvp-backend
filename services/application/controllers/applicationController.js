@@ -260,7 +260,7 @@ export const updateVisaMemberStatus = async (req, res) => {
       return res.status(404).json({ message: "Application not found" });
 
     const member = application.visaSubSteps.find(
-      (m) => m.memberId.toString() === memberId
+      (m) => m.memberId && m.memberId.toString() === memberId
     );
 
     if (!member)

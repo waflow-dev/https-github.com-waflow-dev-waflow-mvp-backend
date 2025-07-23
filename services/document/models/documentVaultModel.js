@@ -37,7 +37,7 @@ const documentVaultSchema = new mongoose.Schema(
       ref: "Auth",
     },
 
-    memberId: { String },
+    memberId: { type: String },
 
     status: {
       type: String,

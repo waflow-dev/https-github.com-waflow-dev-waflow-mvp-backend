@@ -312,6 +312,32 @@ export const getVisaMemberDocuments = async (req, res) => {
   }
 };
 
+export const getVisaMembersByCustomer = async (req, res) => {
+  const { customerId } = req.params;
+
+  try {
+    const application = await Application.findOne({ customer: customerId });
+
+    if (!application) {
+      return res
+        .status(404)
+        .json({ message: "Application not found for this customer" });
+    }
+
+    res.status(200).json({
+      success: true,
+      visaMembers: application.visaSubSteps,
+    });
+  } catch (err) {
+    console.error("Error fetching visa members:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch visa members",
+      error: err.message,
+    });
+  }
+};
+
 export const updateOnboardingDetails = async (req, res) => {
   const { customerId } = req.params;
   const body = req.body;

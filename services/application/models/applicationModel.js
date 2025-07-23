@@ -19,23 +19,13 @@ const stepSchema = new mongoose.Schema({
 });
 
 const visaSubStepSchema = new mongoose.Schema({
-  memberId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
-  medical: {
-    type: stepSchema,
-    default: () => ({ stepName: "Medical & Biometric" }),
+  memberId: { String },
+  status: {
+    type: String,
+    enum: ["Submitted for Review", "Approved", "Rejected"],
+    default: "Submitted for Review",
   },
-  residenceVisa: {
-    type: stepSchema,
-    default: () => ({ stepName: "Residence Visa" }),
-  },
-  emiratesIdSoft: {
-    type: stepSchema,
-    default: () => ({ stepName: "Emirates ID (Soft Copy)" }),
-  },
-  emiratesIdHard: {
-    type: stepSchema,
-    default: () => ({ stepName: "Emirates ID (Hard Copy)" }),
-  },
+  updatedAt: { type: Date, default: Date.now },
 });
 
 const noteSchema = new mongoose.Schema({

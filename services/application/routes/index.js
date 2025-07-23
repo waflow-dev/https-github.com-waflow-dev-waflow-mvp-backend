@@ -5,22 +5,23 @@ import {
   createApplication,
   updateStepStatus,
   addNote,
-  updateVisaSubStep,
-  addVisaMember,
   reviewApplication,
   updateOnboardingDetails,
   getApplicationById,
   getAllApplications,
   showApplicationWithStatus,
   getApplicationByCustomerId,
+  reviewApplicationAfterOnboarding,
+  updateVisaMemberStatus,
+  getVisaMemberDocuments,
+  addVisaMember,
 } from "../controllers/applicationController.js";
-import {
-  createVisaApplication,
-  getAllVisaApplications,
-  getVisaApplicationById,
-  approveVisaApplication,
-  getVisaApplicationsForCustomer,
-} from "../controllers/visaApplicationController.js";
+// import {
+//   createVisaApplication,
+//   getAllVisaApplications,
+//   getVisaApplicationById,
+//   approveVisaApplication,
+// } from "../controllers/visaApplicationController.js";
 
 const router = express.Router();
 
@@ -61,16 +62,17 @@ router.patch(
 // Add note for clarification
 router.post("/note/:customerId", authenticateToken, addNote);
 
+router.post("/visa-member/:appId", addVisaMember);
+
 // Update visa substep status — agent/admin
 router.patch(
   "/visa-substep/:appId/:memberId",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  updateVisaSubStep
+  // authenticateToken,
+  // authorizeRoles("agent", "admin"),
+  updateVisaMemberStatus
 );
 
-// Add visa applicant — agent/admin
-router.post("/visa-member/:appId", addVisaMember);
+router.get("/:customerId/:memberId", getVisaMemberDocuments);
 
 // Review application — agent/admin
 router.post(
@@ -90,39 +92,39 @@ router.put(
 
 // Visa Application Endpoints
 // Customer submits a new visa application
-router.post(
-  "/visa",
-  authenticateToken,
-  authorizeRoles("customer"),
-  createVisaApplication
-);
-// Agent lists all visa applications
-router.get(
-  "/visa",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  getAllVisaApplications
-);
-// Agent views details of a visa application
-router.get(
-  "/visa/:id",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  getVisaApplicationById
-);
-// Agent approves/rejects a visa application
-router.patch(
-  "/visa/:id/approve",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  approveVisaApplication
-);
+// router.post(
+//   "/visa",
+//   authenticateToken,
+//   authorizeRoles("customer"),
+//   createVisaApplication
+// );
+// // Agent lists all visa applications
+// router.get(
+//   "/visa",
+//   authenticateToken,
+//   authorizeRoles("agent", "admin"),
+//   getAllVisaApplications
+// );
+// // Agent views details of a visa application
+// router.get(
+//   "/visa/:id",
+//   authenticateToken,
+//   authorizeRoles("agent", "admin"),
+//   getVisaApplicationById
+// );
+// // Agent approves/rejects a visa application
+// router.patch(
+//   "/visa/:id/approve",
+//   authenticateToken,
+//   authorizeRoles("agent", "admin"),
+//   approveVisaApplication
+// );
 
-router.get(
-  "/visa/customer/:customerId",
+router.patch(
+  "/review-after-onboarding/:applicationId",
   authenticateToken,
-  authorizeRoles("customer", "admin"),
-  getVisaApplicationsForCustomer
+  authorizeRoles("agent", "admin"),
+  reviewApplicationAfterOnboarding
 );
 
 router.get("/:appId", authenticateToken, getApplicationById);

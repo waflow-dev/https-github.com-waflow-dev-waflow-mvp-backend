@@ -56,18 +56,19 @@ export const autoApproveStepsIfDocsValid = async (customerId) => {
   }
 };
 
-// Helper to calculate application status
+// ✅ FINAL VERSION — Shared across all controllers
 const calculateApplicationStatus = (steps) => {
   const total = steps.length;
   const approved = steps.filter((s) => s.status === "Approved").length;
-  const started = steps.some((s) => s.status === "Started");
-  const declined = steps.some((s) => s.status === "Declined");
+  const rejected = steps.some((s) => s.status === "Rejected");
+  const submitted = steps.some((s) => s.status === "Submitted for Review");
 
-  if (declined) return "Rejected";
+  if (rejected) return "Rejected";
   if (approved === total) return "Completed";
-  if (started) return "In Progress";
+  if (submitted || approved > 0) return "In Progress";
   if (steps.every((s) => s.status === "Not Started"))
     return "Ready for Processing";
+
   return "Waiting for Agent Review";
 };
 
@@ -218,6 +219,7 @@ export const addVisaMember = async (req, res) => {
       return res.status(404).json({ message: "Application not found" });
     }
 
+    // Prevent duplicate member entries
     const exists = application.visaSubSteps.find(
       (v) => v.memberId.toString() === memberId
     );
@@ -225,28 +227,11 @@ export const addVisaMember = async (req, res) => {
       return res.status(400).json({ message: "Member already added" });
     }
 
+    // Add member without documents
     const newMember = {
       memberId,
-      medical: {
-        stepName: "Medical & Biometric",
-        status: "Not Started",
-        updatedAt: new Date(),
-      },
-      residenceVisa: {
-        stepName: "Residence Visa",
-        status: "Not Started",
-        updatedAt: new Date(),
-      },
-      emiratesIdSoft: {
-        stepName: "Emirates ID (Soft Copy)",
-        status: "Not Started",
-        updatedAt: new Date(),
-      },
-      emiratesIdHard: {
-        stepName: "Emirates ID (Hard Copy)",
-        status: "Not Started",
-        updatedAt: new Date(),
-      },
+      status: "Submitted for Review",
+      updatedAt: new Date(),
     };
 
     application.visaSubSteps.push(newMember);
@@ -257,6 +242,7 @@ export const addVisaMember = async (req, res) => {
       visaSubSteps: application.visaSubSteps,
     });
   } catch (err) {
+    console.error("Visa member add error:", err);
     res.status(500).json({
       message: "Error adding visa member",
       error: err.message,
@@ -264,9 +250,9 @@ export const addVisaMember = async (req, res) => {
   }
 };
 
-export const updateVisaSubStep = async (req, res) => {
+export const updateVisaMemberStatus = async (req, res) => {
   const { appId, memberId } = req.params;
-  const { subStepName, status } = req.body;
+  const { status } = req.body;
 
   try {
     const application = await Application.findById(appId);
@@ -276,58 +262,51 @@ export const updateVisaSubStep = async (req, res) => {
     const member = application.visaSubSteps.find(
       (m) => m.memberId.toString() === memberId
     );
-    if (!member) return res.status(404).json({ message: "Member not found" });
 
-    // Proper mapping from readable name to member keys
-    const keyMap = {
-      medical: "medical",
-      "residence visa": "residenceVisa",
-      "emirates id (soft copy)": "emiratesIdSoft",
-      "emirates id (hard copy)": "emiratesIdHard",
-    };
+    if (!member)
+      return res.status(404).json({ message: "Visa member not found" });
 
-    const normalized = subStepName.trim().toLowerCase();
-    const key = keyMap[normalized];
-
-    if (!key || !member[key]) {
-      return res.status(400).json({ message: "Invalid subStepName" });
+    if (!["Approved", "Rejected"].includes(status)) {
+      return res.status(400).json({ message: "Invalid status value" });
     }
 
-    // Update substep
-    member[key].status = status;
-    member[key].updatedAt = new Date();
+    member.status = status;
+    member.updatedAt = new Date();
 
-    // ✅ Check if ALL members completed all substeps
-    const allMembersDone = application.visaSubSteps.every((m) => {
-      return (
-        m.medical.status === "Approved" &&
-        m.residenceVisa.status === "Approved" &&
-        m.emiratesIdSoft.status === "Approved" &&
-        m.emiratesIdHard.status === "Approved"
-      );
-    });
-
-    if (allMembersDone) {
-      const visaStep = application.steps.find(
-        (s) => s.stepName === "Visa Application"
-      );
-      if (visaStep && visaStep.status !== "Approved") {
-        visaStep.status = "Approved";
-        visaStep.updatedAt = new Date();
-      }
-    }
-
-    application.status = calculateApplicationStatus(application.steps);
     await application.save();
 
     res.status(200).json({
-      message: `${subStepName} updated successfully`,
+      message: `Visa member marked as ${status}`,
       visaSubSteps: application.visaSubSteps,
-      applicationStatus: application.status,
     });
   } catch (err) {
+    console.error("Error updating visa member:", err);
     res.status(500).json({
-      message: "Error updating visa substep",
+      message: "Error updating visa member status",
+      error: err.message,
+    });
+  }
+};
+
+export const getVisaMemberDocuments = async (req, res) => {
+  const { customerId, memberId } = req.params;
+
+  try {
+    const documents = await Document.find({
+      linkedModel: "Customer",
+      linkedTo: customerId,
+      memberId: memberId,
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: documents,
+    });
+  } catch (err) {
+    console.error("Error fetching visa documents:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch visa member documents",
       error: err.message,
     });
   }
@@ -382,10 +361,13 @@ export const updateOnboardingDetails = async (req, res) => {
     // ✅ Optional Optimization: Trigger auto-approval after onboarding
     await autoApproveStepsIfDocsValid(customerId);
 
+    const updatedApp = await Application.findOne({ customer: customerId });
+
     res.status(200).json({
       success: true,
       message: "Onboarding details submitted successfully",
       data: customer,
+      applicationStatus: updatedApp?.status || "Waiting for Agent Review",
     });
   } catch (err) {
     res.status(500).json({
@@ -596,6 +578,63 @@ export const showApplicationWithStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch application status",
+      error: err.message,
+    });
+  }
+};
+
+export const reviewApplicationAfterOnboarding = async (req, res) => {
+  const { applicationId } = req.params;
+  const { decision, note } = req.body; // decision = "approve" or "clarify"
+
+  try {
+    // Validate input
+    if (!["approve", "clarify"].includes(decision)) {
+      return res.status(400).json({ message: "Invalid decision type" });
+    }
+
+    const application = await Application.findById(applicationId);
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // Determine status change
+    application.status =
+      decision === "approve"
+        ? "Ready for Processing"
+        : "Awaiting Client Response";
+
+    // Store note if clarification requested
+    if (decision === "clarify") {
+      application.sharedNote = note || "Agent requested clarification.";
+    }
+
+    await application.save();
+
+    await logAction({
+      type: "application",
+      action: "review_after_onboarding",
+      performedBy: req.user.id,
+      details: {
+        applicationId,
+        newStatus: application.status,
+        note: decision === "clarify" ? note : undefined,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message:
+        decision === "approve"
+          ? "Application marked as Ready for Processing"
+          : "Clarification requested from customer",
+      applicationStatus: application.status,
+    });
+  } catch (err) {
+    console.error("Review error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error reviewing application",
       error: err.message,
     });
   }

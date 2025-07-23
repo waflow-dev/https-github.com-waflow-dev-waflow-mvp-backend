@@ -15,6 +15,7 @@ import {
   updateVisaMemberStatus,
   getVisaMemberDocuments,
   addVisaMember,
+  getVisaMembersByCustomer,
 } from "../controllers/applicationController.js";
 // import {
 //   createVisaApplication,
@@ -73,6 +74,8 @@ router.patch(
 );
 
 router.get("/:customerId/:memberId", getVisaMemberDocuments);
+
+router.get("/visa-members/customer/:customerId", getVisaMembersByCustomer);
 
 // Review application — agent/admin
 router.post(

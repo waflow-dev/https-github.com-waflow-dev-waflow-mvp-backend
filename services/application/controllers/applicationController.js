@@ -184,7 +184,7 @@ export const addNote = async (req, res) => {
   const { message } = req.body;
 
   try {
-    const application = await Application.findOne({ appId });
+    const application = await Application.findOne({ _id: appId });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }

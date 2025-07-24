@@ -191,7 +191,7 @@ export const addNote = async (req, res) => {
 
     application.notes.push({
       message,
-      addedBy: customerId,
+      addedBy: application.customer,
       timestamp: new Date(),
     });
 

@@ -182,6 +182,7 @@ export const updateStepStatus = async (req, res) => {
 export const addNote = async (req, res) => {
   const { appId } = req.params;
   const { message } = req.body;
+  const user = req.user;
 
   try {
     const application = await Application.findOne({ _id: appId });
@@ -191,7 +192,7 @@ export const addNote = async (req, res) => {
 
     application.notes.push({
       message,
-      addedBy: application.customer,
+      addedBy: user?.userId,
       timestamp: new Date(),
     });
 

@@ -180,11 +180,11 @@ export const updateStepStatus = async (req, res) => {
 };
 
 export const addNote = async (req, res) => {
-  const { customerId } = req.params;
+  const { appId } = req.params;
   const { message } = req.body;
 
   try {
-    const application = await Application.findOne({ customer: customerId });
+    const application = await Application.findOne({ appId });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }

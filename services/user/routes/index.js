@@ -41,7 +41,7 @@ router.get(
 router.get(
   "/agent/profile",
   authenticateToken,
-  authorizeRoles("agent"),
+  authorizeRoles("agent", "admin"),
   getAgentDetails
 );
 router.get(

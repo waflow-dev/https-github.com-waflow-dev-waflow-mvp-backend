@@ -18,33 +18,32 @@ const router = express.Router();
 router.post(
   "/create-document",
   authenticateToken,
-  authorizeRoles("customer", "agent", "admin"),
+  authorizeRoles("customer", "agent", "admin", "manager"),
   upload.single("file"),
   createDocument
 );
 router.put(
   "/:id",
   authenticateToken,
-  authorizeRoles("agent", "admin"),
+  authorizeRoles("agent", "admin", "manager"),
   updateDocumentStatus
 );
 router.post(
   "/:id/note",
   authenticateToken,
-  authorizeRoles("agent", "admin", "customer"),
+  authorizeRoles("agent", "admin", "manager", "customer"),
   addDocumentNote
 );
 router.get(
   "/customer/:customerId",
   authenticateToken,
-  authorizeRoles("customer", "agent", "admin"),
+  authorizeRoles("customer", "agent", "admin", "manager"),
   getCustomerDocuments
 );
 router.get(
   "/application/:appId",
   authenticateToken,
-
-  authorizeRoles("agent", "admin"),
+  authorizeRoles("agent", "admin", "manager"),
   getApplicationDocuments
 );
 router.get("/file/:id", serveDocumentFile);
@@ -53,7 +52,7 @@ router.get("/file/:id", serveDocumentFile);
 router.get(
   "/required",
   authenticateToken,
-  authorizeRoles("customer", "agent", "admin"),
+  authorizeRoles("customer", "agent", "admin", "manager"),
   (req, res) => {
     // You can later move this to a config or DB
     res.json({

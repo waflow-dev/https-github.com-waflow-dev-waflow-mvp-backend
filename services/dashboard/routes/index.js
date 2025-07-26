@@ -21,7 +21,7 @@ router.get(
 router.get(
   "/agent/:agentId",
   authenticateToken,
-  authorizeRoles("agent", "admin"),
+  authorizeRoles("agent", "admin", "manager"),
   getAgentDashboard
 );
 router.get(
@@ -34,14 +34,14 @@ router.get(
 router.get(
   "/agent/document/:customerId",
   authenticateToken,
-  authorizeRoles("agent", "admin"),
+  authorizeRoles("agent", "admin", "manager"),
   getCustomerDocuments
 );
 
 router.get(
   "/debug/applications",
   authenticateToken,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   listAllApplications
 );
 

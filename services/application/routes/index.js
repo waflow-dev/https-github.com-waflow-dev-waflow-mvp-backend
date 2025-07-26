@@ -26,11 +26,11 @@ import {
 
 const router = express.Router();
 
-// Get all applications — allowed for agent/admin
+// Get all applications — allowed for agent/admin/manager
 router.get(
   "/",
   authenticateToken,
-  authorizeRoles("agent", "admin"),
+  authorizeRoles("agent", "admin", "manager"),
   getAllApplications
 );
 
@@ -52,37 +52,41 @@ router.patch(
   updateStepStatus
 );
 
-// Update workflow step status — agent/admin
+// Update workflow step status — agent/admin/manager
 router.patch(
   "/step/:customerId",
   authenticateToken,
-  authorizeRoles("agent", "admin"),
+  authorizeRoles("agent", "admin", "manager"),
   updateStepStatus
 );
 
 // Add note for clarification
 router.post("/note/:appId", authenticateToken, addNote);
 
-router.post("/visa-member/:cutomerId", addVisaMember);
+router.post("/visa-member/:customerId", authenticateToken, addVisaMember);
 
-// Update visa substep status — agent/admin
+// Update visa substep status — agent/admin/manager
 router.patch(
   "/visa-substep/:appId/:memberId",
-  // authenticateToken,
-  // authorizeRoles("agent", "admin"),
+  authenticateToken,
+  authorizeRoles("agent", "admin", "manager"),
   updateVisaMemberStatus
 );
 router.get("/status/:customerId", authenticateToken, showApplicationWithStatus);
 
-router.get("/:customerId/:memberId", getVisaMemberDocuments);
+router.get("/:customerId/:memberId", authenticateToken, getVisaMemberDocuments);
 
-router.get("/visa-members/customer/:customerId", getVisaMembersByCustomer);
+router.get(
+  "/visa-members/customer/:customerId",
+  authenticateToken,
+  getVisaMembersByCustomer
+);
 
-// Review application — agent/admin
+// Review application — agent/admin/manager
 router.post(
   "/review/:applicationId",
   authenticateToken,
-  authorizeRoles("agent", "admin"),
+  authorizeRoles("agent", "admin", "manager"),
   reviewApplication
 );
 

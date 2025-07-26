@@ -211,11 +211,11 @@ export const addNote = async (req, res) => {
 };
 
 export const addVisaMember = async (req, res) => {
-  const { cutomerId } = req.params;
+  const { customerId } = req.params;
   const { memberId } = req.body;
 
   try {
-    const application = await Application.findOne({ customer: cutomerId });
+    const application = await Application.findOne({ customer: customerId });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
@@ -316,8 +316,19 @@ export const getVisaMemberDocuments = async (req, res) => {
 export const getVisaMembersByCustomer = async (req, res) => {
   const { customerId } = req.params;
 
+  console.log("getVisaMembersByCustomer called for customerId:", customerId);
+
   try {
     const application = await Application.findOne({ customer: customerId });
+
+    console.log("Application found:", application ? "Yes" : "No");
+    if (application) {
+      console.log(
+        "VisaSubSteps length:",
+        application.visaSubSteps?.length || 0
+      );
+      console.log("VisaSubSteps:", application.visaSubSteps);
+    }
 
     if (!application) {
       return res
@@ -491,6 +502,7 @@ export const getApplicationByCustomerId = async (req, res) => {
   const user = req.user;
 
   console.log("Fetching application for user:", user);
+  console.log("Fetching application for customerId:", customerId);
 
   try {
     const application = await Application.findOne({ customer: customerId })
@@ -498,6 +510,15 @@ export const getApplicationByCustomerId = async (req, res) => {
       .populate("assignedAgent")
       .populate("visaSubSteps")
       .populate("notes.addedBy");
+
+    console.log("Application found:", application ? "Yes" : "No");
+    if (application) {
+      console.log(
+        "VisaSubSteps length:",
+        application.visaSubSteps?.length || 0
+      );
+      console.log("VisaSubSteps:", application.visaSubSteps);
+    }
 
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
@@ -508,6 +529,7 @@ export const getApplicationByCustomerId = async (req, res) => {
       data: application,
     });
   } catch (err) {
+    console.error("Error in getApplicationByCustomerId:", err);
     res.status(500).json({
       success: false,
       message: "Error fetching application",
@@ -528,7 +550,9 @@ export const getAllApplications = async (req, res) => {
       const agentId = req.user.userId?.toString() || req.user.id?.toString();
       query.assignedAgent = agentId;
     }
-    // If user is admin, show all applications
+    // If user is admin or manager, show all applications
+    // (role === "admin" or role === "manager" or any other role will show all)
+
     const applications = await Application.find(query)
       .populate("customer", "firstName lastName email phoneNumber")
       .populate("assignedAgent", "fullName email")

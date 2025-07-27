@@ -61,7 +61,7 @@ router.patch(
 );
 
 // Add note for clarification
-router.post("/note/:appId", authenticateToken, addNote);
+router.post("/note/:appId", addNote);
 
 router.post("/visa-member/:customerId", authenticateToken, addVisaMember);
 

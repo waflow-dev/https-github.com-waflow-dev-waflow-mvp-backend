@@ -61,7 +61,12 @@ router.patch(
 );
 
 // Add note for clarification
-router.post("/note/:customerId", addNote);
+router.post(
+  "/note/:customerId",
+  authenticateToken,
+  authorizeRoles("agent", "customer", "admin"),
+  addNote
+);
 
 router.post("/visa-member/:customerId", authenticateToken, addVisaMember);
 

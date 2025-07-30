@@ -110,6 +110,13 @@ export const createCustomer = async (req, res) => {
 export const createAgent = async (req, res) => {
   const { fullName, email, phoneNumber, password } = req.body;
 
+  if (!fullName || !email || !phoneNumber || !password) {
+    return res.status(400).json({
+      message:
+        "All fields are required: fullName, email, phoneNumber, password",
+    });
+  }
+
   try {
     const exists = await Auth.findOne({ email });
     if (exists) return res.status(400).json({ message: "User already exists" });
@@ -197,7 +204,11 @@ export const getCustomerDetails = async (req, res) => {
 
 export const getAgentDetails = async (req, res) => {
   try {
-    const agentId = req.user.id;
+    const agentId = req.params.agentId || req.user?.id;
+
+    if (!agentId) {
+      return res.status(400).json({ message: "Agent ID is required" });
+    }
 
     const agent = await Agent.findById(agentId).lean();
     if (!agent) {
@@ -265,6 +276,46 @@ export const getAllAgents = async (req, res) => {
   } catch (error) {
     res.status(500).json({
       message: "Error fetching agents",
+      error: error.message,
+    });
+  }
+};
+
+export const updateAgent = async (req, res) => {
+  try {
+    const { agentId } = req.params;
+    const { fullName, phoneNumber, status } = req.body;
+
+    if (!agentId) {
+      return res.status(400).json({ message: "Agent ID is required" });
+    }
+
+    // Build update object based on what's provided
+    const updateData = {};
+    if (fullName) updateData.fullName = fullName;
+    if (phoneNumber) updateData.phoneNumber = phoneNumber;
+    if (status && ["active", "inactive"].includes(status)) {
+      updateData.status = status;
+    }
+
+    const updatedAgent = await Agent.findByIdAndUpdate(agentId, updateData, {
+      new: true,
+    });
+
+    if (!updatedAgent) {
+      return res.status(404).json({ message: "Agent not found" });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "Agent updated successfully",
+      data: updatedAgent,
+    });
+  } catch (error) {
+    console.error("Error updating agent:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating agent",
       error: error.message,
     });
   }

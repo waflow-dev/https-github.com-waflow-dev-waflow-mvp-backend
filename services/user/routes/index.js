@@ -12,6 +12,7 @@ import {
   getAdminDetails,
   getAllCustomers,
   getAllAgents,
+  updateAgent,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -44,6 +45,7 @@ router.get(
   authorizeRoles("agent", "admin", "manager"),
   getAgentDetails
 );
+router.get("/agent/:agentId", getAgentDetails);
 router.get(
   "/admin/profile",
   authenticateToken,
@@ -53,6 +55,13 @@ router.get(
 
 router.get("/customers", authenticateToken, getAllCustomers);
 
-router.get("/agents", authenticateToken, authorizeRoles("admin", "manager"), getAllAgents);
+router.get(
+  "/agents",
+  authenticateToken,
+  authorizeRoles("admin", "manager"),
+  getAllAgents
+);
+
+router.put("/agent/:agentId", updateAgent);
 
 export default router;

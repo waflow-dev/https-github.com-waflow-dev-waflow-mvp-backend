@@ -53,6 +53,11 @@ router.get(
 
 router.get("/customers", authenticateToken, getAllCustomers);
 
-router.get("/agents", authenticateToken, authorizeRoles("admin", "manager"), getAllAgents);
+router.get(
+  "/agents",
+  authenticateToken,
+  authorizeRoles("admin", "manager"),
+  getAllAgents
+);
 
 export default router;

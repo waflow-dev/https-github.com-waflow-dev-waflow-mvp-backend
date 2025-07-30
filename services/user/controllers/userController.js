@@ -110,6 +110,13 @@ export const createCustomer = async (req, res) => {
 export const createAgent = async (req, res) => {
   const { fullName, email, phoneNumber, password } = req.body;
 
+  if (!fullName || !email || !phoneNumber || !password) {
+    return res.status(400).json({
+      message:
+        "All fields are required: fullName, email, phoneNumber, password",
+    });
+  }
+
   try {
     const exists = await Auth.findOne({ email });
     if (exists) return res.status(400).json({ message: "User already exists" });

@@ -4,12 +4,16 @@ import {
   markAsRead,
   clearAllNotifications,
 } from "../controllers/notificationController.js";
-import { protect } from "../middleware/authMiddleware.js";
+import { authenticateToken } from "../../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/notifications", getUnreadNotifications);
-router.patch("/notifications/read/:id", markAsRead);
-router.patch("/notifications/clear-all", clearAllNotifications);
+router.get("/notifications", authenticateToken, getUnreadNotifications);
+router.patch("/notifications/read/:id", authenticateToken, markAsRead);
+router.patch(
+  "/notifications/clear-all",
+  authenticateToken,
+  clearAllNotifications
+);
 
 export default router;

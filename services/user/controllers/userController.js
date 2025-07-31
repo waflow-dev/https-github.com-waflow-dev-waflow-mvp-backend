@@ -134,7 +134,7 @@ export const createAgent = async (req, res) => {
     await sendEmail(
       email,
       "Agent Access Granted",
-      `You’ve been added to Waflow. Check your email to set your password and log in.`
+      `You've been added to Waflow. Check your email to set your password and log in.`
     );
 
     await logAction({

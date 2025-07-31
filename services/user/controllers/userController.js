@@ -147,6 +147,7 @@ export const createAgent = async (req, res) => {
 
     res.status(201).json({ message: "Agent created successfully" });
   } catch (err) {
+    console.error("Error in createAgent:", err);
     res
       .status(500)
       .json({ message: "Failed to create agent", error: err.message });

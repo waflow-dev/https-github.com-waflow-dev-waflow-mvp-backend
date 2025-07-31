@@ -57,6 +57,31 @@ export const getAgentDashboard = async (req, res) => {
   }
 };
 
+export const getAgentCustomerCount = async (req, res) => {
+  const { agentId } = req.params;
+  try {
+    // Only allow admin and manager to access this endpoint
+    if (req.user.role !== "admin" && req.user.role !== "manager") {
+      return res.status(403).json({ message: "Access denied" });
+    }
+
+    const assignedCustomers = await Customer.find({ assignedAgentId: agentId });
+
+    res.status(200).json({
+      success: true,
+      agentId,
+      customerCount: assignedCustomers.length,
+    });
+  } catch (err) {
+    res
+      .status(500)
+      .json({
+        message: "Failed to get agent customer count",
+        error: err.message,
+      });
+  }
+};
+
 export const getCustomerDashboard = async (req, res) => {
   const { customerId } = req.params;
   try {

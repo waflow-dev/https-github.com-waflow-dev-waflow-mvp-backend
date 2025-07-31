@@ -20,7 +20,7 @@ const router = express.Router();
 router.post(
   "/create-agent",
   authenticateToken,
-  authorizeRoles("admin"),
+  authorizeRoles("admin", "manager"),
   createAgent
 );
 router.post(

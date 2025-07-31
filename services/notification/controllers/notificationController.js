@@ -1,5 +1,77 @@
 import Notification from "../models/notificationModel.js";
 
+// 🟩 Get Notifications for Customer
+export const getCustomerNotifications = async (req, res) => {
+  const customerId = req.params.customerId;
+
+  try {
+    const notifications = await Notification.find({
+      userId: customerId,
+      userRole: "customer",
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: notifications,
+    });
+  } catch (error) {
+    console.error("Error fetching customer notifications:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch customer notifications",
+      error: error.message,
+    });
+  }
+};
+
+// 🟩 Get Notifications for Agent
+export const getAgentNotifications = async (req, res) => {
+  const agentId = req.params.agentId;
+
+  try {
+    const notifications = await Notification.find({
+      userId: agentId,
+      userRole: "agent",
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: notifications,
+    });
+  } catch (error) {
+    console.error("Error fetching agent notifications:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch agent notifications",
+      error: error.message,
+    });
+  }
+};
+
+// 🟩 Get Notifications for Admin
+export const getAdminNotifications = async (req, res) => {
+  const adminId = req.params.adminId;
+
+  try {
+    const notifications = await Notification.find({
+      userId: adminId,
+      userRole: "admin",
+    }).sort({ createdAt: -1 });
+
+    res.status(200).json({
+      success: true,
+      data: notifications,
+    });
+  } catch (error) {
+    console.error("Error fetching admin notifications:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch admin notifications",
+      error: error.message,
+    });
+  }
+};
+
 // 1. Get all unread notifications for a user
 export const getUnreadNotifications = async (req, res) => {
   try {
@@ -12,13 +84,11 @@ export const getUnreadNotifications = async (req, res) => {
 
     res.status(200).json({ success: true, data: notifications });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error fetching notifications",
-        error: err.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error fetching notifications",
+      error: err.message,
+    });
   }
 };
 
@@ -41,13 +111,11 @@ export const markAsRead = async (req, res) => {
 
     res.status(200).json({ success: true, data: notification });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error updating notification",
-        error: err.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error updating notification",
+      error: err.message,
+    });
   }
 };
 
@@ -65,13 +133,11 @@ export const clearAllNotifications = async (req, res) => {
       .status(200)
       .json({ success: true, message: "All notifications marked as read" });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        success: false,
-        message: "Error clearing notifications",
-        error: err.message,
-      });
+    res.status(500).json({
+      success: false,
+      message: "Error clearing notifications",
+      error: err.message,
+    });
   }
 };
 

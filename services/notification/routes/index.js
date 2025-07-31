@@ -3,17 +3,19 @@ import {
   getUnreadNotifications,
   markAsRead,
   clearAllNotifications,
+  getCustomerNotifications,
+  getAgentNotifications,
+  getAdminNotifications,
 } from "../controllers/notificationController.js";
 import { authenticateToken } from "../../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.get("/notifications", authenticateToken, getUnreadNotifications);
-router.patch("/notifications/read/:id", authenticateToken, markAsRead);
-router.patch(
-  "/notifications/clear-all",
-  authenticateToken,
-  clearAllNotifications
-);
+router.get("/customer/:customerId", getCustomerNotifications);
+router.get("/agent/:agentId", getAgentNotifications);
+router.get("/admin/:adminId", getAdminNotifications);
+router.get("/", authenticateToken, getUnreadNotifications);
+router.patch("/read/:id", markAsRead);
+router.patch("/clear-all", clearAllNotifications);
 
 export default router;

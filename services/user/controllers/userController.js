@@ -7,6 +7,7 @@ import Agent from "../../user/models/agentModel.js";
 import bcrypt from "bcryptjs";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import workflowConfig from "../../application/utils/workflowConfig.js";
+import { createNotification } from "../../notification/controllers/notificationController.js";
 import { createApplicationForCustomer } from "../../application/utils/createApplicationForCustomer.js";
 
 export const createCustomer = async (req, res) => {
@@ -75,6 +76,47 @@ export const createCustomer = async (req, res) => {
       assignedAgentId: assignedAgentId || req.user.id,
       performedBy: req.user.id,
     });
+
+    // ✅ Create Notifications
+    const fullName = `${firstName} ${lastName}`;
+
+    // Notify Customer
+    await createNotification({
+      userId: customer._id,
+      userRole: "customer",
+      title: "Onboarding Submitted",
+      message: `${fullName} has submitted their onboarding form.`,
+      type: "ApplicationUpdate",
+      referenceId: customer._id,
+      referenceType: "Customer",
+    });
+
+    // Notify Assigned Agent (if present)
+    if (assignedAgentId) {
+      await createNotification({
+        userId: assignedAgentId,
+        userRole: "agent",
+        title: "Onboarding Submitted",
+        message: `${fullName} has submitted their onboarding form.`,
+        type: "ApplicationUpdate",
+        referenceId: customer._id,
+        referenceType: "Customer",
+      });
+    }
+
+    // ✅ Notify all Admins (including Managers)
+    const admins = await Admin.find().select("_id");
+    for (let admin of admins) {
+      await createNotification({
+        userId: admin._id,
+        userRole: "admin", // ✅ Use "Admin" as userRole
+        title: "Onboarding Submitted",
+        message: `${fullName} has submitted their onboarding form.`,
+        type: "ApplicationUpdate",
+        referenceId: customer._id,
+        referenceType: "Customer",
+      });
+    }
 
     await sendEmail(
       email,

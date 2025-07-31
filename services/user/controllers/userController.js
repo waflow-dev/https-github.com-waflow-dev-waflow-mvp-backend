@@ -72,15 +72,15 @@ export const createCustomer = async (req, res) => {
 
     await createApplicationForCustomer({
       customerId: customer._id,
-      assignedAgentId: assignedAgentId || req.user.userId,
+      assignedAgentId: assignedAgentId || req.user.id,
       performedBy: req.user.id,
     });
 
-    // await sendEmail(
-    //   email,
-    //   "Account created",
-    //   `Your account has been successfully created, please login.`
-    // );
+    await sendEmail(
+      email,
+      "Welcome to Waflow",
+      `Your account has been created. Please check your email to activate and log in.`
+    );
 
     await logAction({
       type: "user",
@@ -130,6 +130,12 @@ export const createAgent = async (req, res) => {
       passwordHash,
       role: "agent",
     });
+
+    await sendEmail(
+      email,
+      "Agent Access Granted",
+      `You’ve been added to Waflow. Check your email to set your password and log in.`
+    );
 
     await logAction({
       type: "user",
@@ -284,7 +290,7 @@ export const getAllAgents = async (req, res) => {
 export const updateAgent = async (req, res) => {
   try {
     const { agentId } = req.params;
-    const { fullName, phoneNumber, status } = req.body;
+    const { fullName, phoneNumber, status, password } = req.body;
 
     if (!agentId) {
       return res.status(400).json({ message: "Agent ID is required" });
@@ -296,6 +302,28 @@ export const updateAgent = async (req, res) => {
     if (phoneNumber) updateData.phoneNumber = phoneNumber;
     if (status && ["active", "inactive"].includes(status)) {
       updateData.status = status;
+    }
+
+    const authUpdateData = {};
+
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      authUpdateData.passwordHash = passwordHash;
+    }
+
+    if (status && ["active", "inactive"].includes(status)) {
+      authUpdateData.isActive = status === "active";
+    }
+
+    // Update the Auth document where userId matches agentId
+    const authUpdatedAgent = await Auth.findOneAndUpdate(
+      { userId: agentId }, // 🔁 use findOne instead of findById
+      authUpdateData,
+      { new: true }
+    );
+
+    if (!authUpdatedAgent) {
+      return res.status(404).json({ message: "Auth record not found" });
     }
 
     const updatedAgent = await Agent.findByIdAndUpdate(agentId, updateData, {
@@ -310,6 +338,7 @@ export const updateAgent = async (req, res) => {
       success: true,
       message: "Agent updated successfully",
       data: updatedAgent,
+      authData: authUpdatedAgent,
     });
   } catch (error) {
     console.error("Error updating agent:", error);

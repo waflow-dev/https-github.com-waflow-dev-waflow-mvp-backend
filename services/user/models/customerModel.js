@@ -36,7 +36,7 @@ const customerSchema = new mongoose.Schema(
     currentAddress: { type: String },
     permanentAddress: { type: String },
     nationality: { type: String, required: true },
-    gender: { type: String, enum: ["Male", "Female", "Other"], required: true },
+    gender: { type: String, enum: ["male", "female", "other"], required: true },
     designation: { type: String },
 
     role: { type: String },

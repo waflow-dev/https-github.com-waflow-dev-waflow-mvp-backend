@@ -52,13 +52,13 @@ export const forgotPassword = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const token = generateResetToken(user.userId);
-    const resetUrl = `http://localhost:5000/reset-password/${token}`;
+    const resetUrl = `https://waflow-frontend.vercel.app/reset-password/${token}`;
 
-    // await sendEmail(
-    //   email,
-    //   "Reset Your Password",
-    //   `Click the link: ${resetUrl}`
-    // );
+    await sendEmail(
+      email,
+      "Reset Your Password",
+      `Click the link: ${resetUrl}`
+    );
 
     await logAction({
       type: "auth",
@@ -105,7 +105,6 @@ export const resetPassword = async (req, res) => {
       .json({ message: "Invalid or expired token", error: err.message });
   }
 };
-
 
 export const getProfile = async (req, res) => {
   try {

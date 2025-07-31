@@ -1,8 +1,15 @@
 import express from "express";
-import { sendGeneralEmail } from "../controllers/emailController.js";
+import {
+  getUnreadNotifications,
+  markAsRead,
+  clearAllNotifications,
+} from "../controllers/notificationController.js";
+import { protect } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/send", sendGeneralEmail);
+router.get("/notifications", getUnreadNotifications);
+router.patch("/notifications/read/:id", markAsRead);
+router.patch("/notifications/clear-all", clearAllNotifications);
 
 export default router;

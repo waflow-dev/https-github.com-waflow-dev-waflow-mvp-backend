@@ -1,7 +1,6 @@
 import Document from "../models/documentVaultModel.js";
 import Application from "../../application/models/applicationModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
-import { autoApproveStepsIfDocsValid } from "../../application/controllers/applicationController.js";
 import { uploadToCloudinaryFromBuffer } from "../utils/cloudinary.js";
 import workflowConfig from "../../application/utils/workflowConfig.js";
 import axios from "axios";
@@ -78,6 +77,20 @@ export const createDocument = async (req, res) => {
       memberId,
     });
 
+    await logAction({
+      type: "document",
+      action: "document_uploaded",
+      performedBy: req.user.id,
+      targetUser: linkedModel === "Customer" ? linkedTo : null,
+      details: {
+        documentId: newDoc._id,
+        linkedTo,
+        linkedModel,
+        documentType,
+        relatedStepName,
+      },
+    });
+
     // --- NEW LOGIC: If this is the first document for the application, update Application status ---
     if (linkedModel === "Application" && applicationId) {
       const docCount = await Document.countDocuments({
@@ -148,6 +161,19 @@ export const updateDocumentStatus = async (req, res) => {
       return res.status(404).json({ message: "Document not found" });
     }
 
+    await logAction({
+      type: "document",
+      action: `document_status_updated_to_${status.toLowerCase()}`,
+      performedBy: req.user.id,
+      targetUser: updatedDoc.userId,
+      details: {
+        documentId: updatedDoc._id,
+        newStatus: status,
+        notes,
+        expiryDate,
+      },
+    });
+
     // 👇 Manually reject step if a document is rejected
     if (status === "Rejected" && updatedDoc.relatedStepName) {
       const appId =
@@ -166,18 +192,6 @@ export const updateDocumentStatus = async (req, res) => {
           step.updatedAt = new Date();
           application.status = calculateApplicationStatus(application.steps);
           await application.save();
-        }
-      }
-    }
-
-    // ✅ Auto-approve steps after document approval
-    if (status === "Approved") {
-      if (updatedDoc.linkedModel === "Customer") {
-        await autoApproveStepsIfDocsValid(updatedDoc.linkedTo);
-      } else if (updatedDoc.linkedModel === "Application") {
-        const application = await Application.findById(updatedDoc.linkedTo);
-        if (application) {
-          await autoApproveStepsIfDocsValid(application.customer);
         }
       }
     }
@@ -304,6 +318,18 @@ export const addDocumentNote = async (req, res) => {
     if (!doc.notes) doc.notes = [];
     doc.notes.push({ message, addedBy, addedByRole, timestamp: new Date() });
     await doc.save();
+
+    await logAction({
+      type: "document",
+      action: "note_added_to_document",
+      performedBy: addedBy,
+      targetUser: doc.userId,
+      details: {
+        documentId: doc._id,
+        note: message,
+        addedByRole,
+      },
+    });
 
     res.status(200).json({ success: true, notes: doc.notes });
   } catch (err) {

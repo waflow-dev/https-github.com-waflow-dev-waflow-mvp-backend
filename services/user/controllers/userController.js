@@ -1,14 +1,14 @@
 import Customer from "../../user/models/customerModel.js";
 import Admin from "../../user/models/adminModel.js";
-import Application from "../../application/models/applicationModel.js";
 import sendEmail from "../../notification/utils/sendEmail.js";
 import Auth from "../../auth/models/authModel.js";
 import Agent from "../../user/models/agentModel.js";
 import bcrypt from "bcryptjs";
 import { logAction } from "../../audit logs/utils/logHelper.js";
-import workflowConfig from "../../application/utils/workflowConfig.js";
 import { createNotification } from "../../notification/controllers/notificationController.js";
-import { createApplicationForCustomer } from "../../application/utils/createApplicationForCustomer.js";
+import { generateCustomId } from "../utils/generateCustomId.js";
+
+///////////////////////////////////////Create Users///////////////////////////////////////////////////////////////////////////
 
 export const createCustomer = async (req, res) => {
   try {
@@ -18,20 +18,13 @@ export const createCustomer = async (req, res) => {
       middleName,
       lastName,
       dob,
+      gender,
       email,
       phoneNumber,
-      currentAddress,
-      permanentAddress,
       nationality,
-      gender,
-      designation,
-      companyType,
-      jurisdiction,
-      businessActivity1,
-      officeType,
-      quotedPrice,
-      paymentPlans,
-      paymentDetails,
+      address,
+      emiratesIdNumber,
+      passportNumber,
       password,
     } = req.body;
 
@@ -40,28 +33,24 @@ export const createCustomer = async (req, res) => {
       return res.status(400).json({ message: "Customer already exists" });
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const customerId = await generateCustomId(Customer, "CX", "customerId");
+    console.log(assignedAgentId);
 
     const customer = await Customer.create({
-      assignedAgentId: assignedAgentId || null,
+      assignedAgentId: assignedAgentId || req.user.id,
+      assignedAgentRole: req.user.role,
       firstName,
       middleName,
       lastName,
       dob,
       email,
-      role: "customer",
       phoneNumber,
-      currentAddress,
-      permanentAddress,
+      address,
       nationality,
       gender,
-      designation,
-      companyType,
-      jurisdiction,
-      businessActivity1,
-      officeType,
-      quotedPrice,
-      paymentPlans,
-      paymentDetails,
+      emiratesIdNumber,
+      passportNumber,
+      customerId,
     });
 
     await Auth.create({
@@ -70,59 +59,6 @@ export const createCustomer = async (req, res) => {
       passwordHash,
       role: "customer",
     });
-
-    await createApplicationForCustomer({
-      customerId: customer._id,
-      assignedAgentId: assignedAgentId || req.user.id,
-      performedBy: req.user.id,
-    });
-
-    // ✅ Create Notifications
-    const fullName = `${firstName} ${lastName}`;
-
-    // Notify Customer
-    await createNotification({
-      userId: customer._id,
-      userRole: "customer",
-      title: "Onboarding Submitted",
-      message: `${fullName} has submitted their onboarding form.`,
-      type: "ApplicationUpdate",
-      referenceId: customer._id,
-      referenceType: "Customer",
-    });
-
-    // Notify Assigned Agent (if present)
-    if (assignedAgentId) {
-      await createNotification({
-        userId: assignedAgentId,
-        userRole: "agent",
-        title: "Onboarding Submitted",
-        message: `${fullName} has submitted their onboarding form.`,
-        type: "ApplicationUpdate",
-        referenceId: customer._id,
-        referenceType: "Customer",
-      });
-    }
-
-    // ✅ Notify all Admins (including Managers)
-    const admins = await Admin.find().select("_id");
-    for (let admin of admins) {
-      await createNotification({
-        userId: admin._id,
-        userRole: "admin", // ✅ Use "Admin" as userRole
-        title: "Onboarding Submitted",
-        message: `${fullName} has submitted their onboarding form.`,
-        type: "ApplicationUpdate",
-        referenceId: customer._id,
-        referenceType: "Customer",
-      });
-    }
-
-    await sendEmail(
-      email,
-      "Welcome to Waflow",
-      `Your account has been created. Please check your email to activate and log in.`
-    );
 
     await logAction({
       type: "user",
@@ -140,11 +76,10 @@ export const createCustomer = async (req, res) => {
       .status(201)
       .json({ message: "Customer created and onboarded successfully" });
   } catch (error) {
-    console.error("Error creating customer:", error); // Log full error
+    console.error("Error creating customer:", error);
     res.status(500).json({
       message: "Error creating customer",
       error: error.message,
-      stack: error.stack, // Include stack trace for debugging
     });
   }
 };
@@ -164,8 +99,16 @@ export const createAgent = async (req, res) => {
     if (exists) return res.status(400).json({ message: "User already exists" });
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const agentId = await generateCustomId(Agent, "AG", "agentId");
 
-    const agent = await Agent.create({ fullName, email, phoneNumber });
+    const agent = await Agent.create({
+      fullName,
+      email,
+      phoneNumber,
+      agentId,
+      createdBy: req.user.id,
+    });
+
     await Auth.create({
       userId: agent._id,
       email,
@@ -173,16 +116,10 @@ export const createAgent = async (req, res) => {
       role: "agent",
     });
 
-    await sendEmail(
-      email,
-      "Agent Access Granted",
-      `You've been added to Waflow. Check your email to set your password and log in.`
-    );
-
     await logAction({
       type: "user",
       action: "agent_created",
-      performedBy: req.user.id, // assuming you use middleware
+      performedBy: req.user.id,
       targetUser: agent._id,
       details: { name: fullName, email },
     });
@@ -205,18 +142,29 @@ export const createAdmin = async (req, res) => {
       return res.status(400).json({ message: "Admin already exists" });
 
     const passwordHash = await bcrypt.hash(password, 10);
+    const adminId = await generateCustomId(Admin, "ADM", "adminId");
 
     const admin = await Admin.create({
       fullName,
       email,
       phoneNumber,
       department,
+      adminId,
     });
+
     await Auth.create({
       userId: admin._id,
       email,
       passwordHash,
       role: "admin",
+    });
+
+    await logAction({
+      type: "user",
+      action: "admin_created",
+      performedBy: req.user.id,
+      targetUser: admin._id,
+      details: { name: fullName, email },
     });
 
     res.status(201).json({ message: "Admin created successfully" });
@@ -226,6 +174,8 @@ export const createAdmin = async (req, res) => {
       .json({ message: "Failed to create admin", error: err.message });
   }
 };
+
+///////////////////////////////////////Get user details///////////////////////////////////////////////////////////////////
 
 export const getCustomerDetails = async (req, res) => {
   try {
@@ -330,6 +280,8 @@ export const getAllAgents = async (req, res) => {
   }
 };
 
+//////////////////////////////////////////Update User Details////////////////////////////////////////////////////////////////
+
 export const updateAgent = async (req, res) => {
   try {
     const { agentId } = req.params;
@@ -339,7 +291,6 @@ export const updateAgent = async (req, res) => {
       return res.status(400).json({ message: "Agent ID is required" });
     }
 
-    // Build update object based on what's provided
     const updateData = {};
     if (fullName) updateData.fullName = fullName;
     if (phoneNumber) updateData.phoneNumber = phoneNumber;
@@ -348,19 +299,25 @@ export const updateAgent = async (req, res) => {
     }
 
     const authUpdateData = {};
-
     if (password) {
       const passwordHash = await bcrypt.hash(password, 10);
       authUpdateData.passwordHash = passwordHash;
     }
-
     if (status && ["active", "inactive"].includes(status)) {
       authUpdateData.isActive = status === "active";
     }
 
-    // Update the Auth document where userId matches agentId
+    if (
+      Object.keys(updateData).length === 0 &&
+      Object.keys(authUpdateData).length === 0
+    ) {
+      return res
+        .status(400)
+        .json({ message: "No valid fields provided for update" });
+    }
+
     const authUpdatedAgent = await Auth.findOneAndUpdate(
-      { userId: agentId }, // 🔁 use findOne instead of findById
+      { userId: agentId },
       authUpdateData,
       { new: true }
     );
@@ -377,11 +334,22 @@ export const updateAgent = async (req, res) => {
       return res.status(404).json({ message: "Agent not found" });
     }
 
+    await logAction({
+      type: "user",
+      action: "agent_updated",
+      performedBy: req.user.id,
+      targetUser: agentId,
+      details: { ...updateData, ...(password && { passwordUpdated: true }) },
+    });
+
     res.status(200).json({
       success: true,
       message: "Agent updated successfully",
       data: updatedAgent,
-      authData: authUpdatedAgent,
+      authData: {
+        email: authUpdatedAgent.email,
+        isActive: authUpdatedAgent.isActive,
+      },
     });
   } catch (error) {
     console.error("Error updating agent:", error);

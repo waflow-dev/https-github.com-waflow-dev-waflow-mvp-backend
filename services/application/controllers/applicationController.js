@@ -1,62 +1,13 @@
 import Application from "../models/applicationModel.js";
 import Customer from "../../user/models/customerModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
+import { createNotification } from "../../notification/controllers/notificationController.js";
 import workflowConfig from "../utils/workflowConfig.js";
-import { stepDocumentMap } from "../utils/stepDocumentMap.js";
 import Document from "../../document/models/documentVaultModel.js";
 
-export const autoApproveStepsIfDocsValid = async (customerId) => {
-  const application = await Application.findOne({ customer: customerId });
-  if (!application) return;
+////////////////////////////////////////Helper Function////////////////////////////////////////////////////////////////
 
-  const approvedDocs = await Document.find({
-    $or: [
-      { linkedTo: customerId, linkedModel: "Customer" },
-      { linkedTo: application._id, linkedModel: "Application" },
-    ],
-    status: "Approved",
-  });
-
-  // Grouping by relatedStepName
-  const stepwiseDocs = {};
-  approvedDocs.forEach((doc) => {
-    if (!stepwiseDocs[doc.relatedStepName]) {
-      stepwiseDocs[doc.relatedStepName] = [];
-    }
-    stepwiseDocs[doc.relatedStepName].push(doc.documentType);
-  });
-
-  let updated = false;
-  const updatedSteps = [];
-
-  for (const step of application.steps) {
-    const requiredByMap = stepDocumentMap[step.stepName] || [];
-    const relatedDocs = stepwiseDocs[step.stepName] || [];
-
-    const allApproved =
-      requiredByMap.length === 0 ||
-      requiredByMap.every((docType) => relatedDocs.includes(docType));
-
-    if (
-      allApproved &&
-      step.status !== "Approved" &&
-      (relatedDocs.length > 0 || requiredByMap.length > 0)
-    ) {
-      step.status = "Approved";
-      step.updatedAt = new Date();
-      updated = true;
-      updatedSteps.push(step.stepName);
-    }
-  }
-
-  if (updated) {
-    application.status = calculateApplicationStatus(application.steps);
-    await application.save();
-    console.log("✅ Auto-approved steps:", updatedSteps);
-  }
-};
-
-// ✅ FINAL VERSION — Shared across all controllers
+// ✅ Helper to determine app status
 const calculateApplicationStatus = (steps) => {
   const total = steps.length;
   const approved = steps.filter((s) => s.status === "Approved").length;
@@ -72,29 +23,43 @@ const calculateApplicationStatus = (steps) => {
   return "Waiting for Agent Review";
 };
 
+////////////////////////////////////////Create Application////////////////////////////////////////////////////////////////
+
 export const createApplication = async (req, res) => {
-  const { customerId, assignedAgentId } = req.body;
+  const {
+    customerId,
+    assignedAgent,
+    assignedAgentRole,
+    applicationType,
+    emirate,
+    legalForm,
+    proposedCompanyNamesEN,
+    proposedCompanyNameAR,
+    officeRequired,
+    officeType,
+    totalAgreedCost,
+    paymentEntries = [],
+  } = req.body;
 
   try {
-    const existing = await Application.findOne({ customer: customerId });
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    const existing = await Application.findOne({ customer: customer._id });
     if (existing) {
       return res
         .status(400)
         .json({ message: "Application already exists for this customer." });
     }
 
-    const customer = await Customer.findById(customerId);
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
-
-    const jurisdiction = customer.jurisdiction?.toLowerCase();
-    const stepsFromConfig = workflowConfig[jurisdiction];
+    const stepsFromConfig = workflowConfig[applicationType?.toLowerCase()];
 
     if (!stepsFromConfig) {
       return res
         .status(400)
-        .json({ message: "Workflow steps not defined for jurisdiction" });
+        .json({ message: "Workflow steps not defined for Application Type" });
     }
 
     const steps = stepsFromConfig.map((step) => ({
@@ -103,11 +68,25 @@ export const createApplication = async (req, res) => {
       updatedAt: new Date(),
     }));
 
-    const application = await Application.create({
+    const appCount = await Application.countDocuments();
+    const paddedNumber = String(appCount + 1).padStart(4, "0");
+    const applicationId = `APP-${paddedNumber}`;
+
+    const newApplication = await Application.create({
+      applicationId,
       customer: customerId,
-      assignedAgent: assignedAgentId,
+      assignedAgent,
+      assignedAgentRole,
+      applicationType,
+      emirate,
+      legalForm,
+      proposedCompanyNamesEN,
+      proposedCompanyNameAR,
+      officeRequired,
+      officeType,
+      totalAgreedCost,
+      paymentEntries,
       steps,
-      status: "New",
     });
 
     await logAction({
@@ -115,77 +94,429 @@ export const createApplication = async (req, res) => {
       action: "application_created",
       performedBy: req.user.id,
       targetUser: customerId,
-      details: { assignedAgent: assignedAgentId },
+      details: { applicationId },
     });
 
-    res
-      .status(201)
-      .json({ message: "Application created successfully", application });
+    await createNotification({
+      userId: customerId,
+      userRole: "customer",
+      title: "Application Created",
+      message: `Your application (${applicationId}) has been created.`,
+      type: "application",
+      referenceId: newApplication._id,
+      referenceType: "Application",
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Application created successfully",
+      data: newApplication,
+    });
   } catch (err) {
-    console.error("Application creation error:", err);
+    console.error("Error creating application:", err);
     res.status(500).json({
+      success: false,
       message: "Server error while creating application",
       error: err.message,
     });
   }
 };
 
-// PATCH: update step status
-export const updateStepStatus = async (req, res) => {
-  const { customerId } = req.params;
-  const { stepName, status } = req.body;
+////////////////////////////////////////Update Application////////////////////////////////////////////////////////////////
+
+export const updateOnboardingDetails = async (req, res) => {
+  const { applicationId } = req.params;
+  const {
+    businessActivities,
+    numberOfShareholders,
+    basicInvestment,
+    sponsorRequired,
+    sponsorDetails,
+    shareholderDetails,
+  } = req.body;
 
   try {
-    const application = await Application.findOne({ customer: customerId });
-    if (!application)
+    const application = await Application.findById(applicationId);
+
+    if (!application) {
       return res.status(404).json({ message: "Application not found" });
+    }
 
-    const stepIndex = application.steps.findIndex(
-      (s) => s.stepName === stepName
-    );
-    if (stepIndex === -1)
-      return res.status(400).json({ message: "Step not found" });
+    // ❌ Prevent update if locked
+    if (application.isLocked) {
+      return res.status(403).json({
+        message: "Application is locked and cannot be edited by the customer",
+      });
+    }
 
-    application.steps[stepIndex].status = status;
-    application.steps[stepIndex].updatedAt = new Date();
+    // ⚙️ Update only the customer-editable fields
+    if (businessActivities) application.businessActivities = businessActivities;
+    if (numberOfShareholders !== undefined)
+      application.numberOfShareholders = numberOfShareholders;
+    if (basicInvestment !== undefined)
+      application.basicInvestment = basicInvestment;
+    if (sponsorRequired !== undefined)
+      application.sponsorRequired = sponsorRequired;
+    if (sponsorDetails) application.sponsorDetails = sponsorDetails;
+    if (shareholderDetails) application.shareholderDetails = shareholderDetails;
 
-    // Auto-update application status
-    application.status = calculateApplicationStatus(application.steps);
-
+    // 🧠 Update status & save
+    application.status = "Waiting for Agent Review";
     await application.save();
 
-    const updatedStatus = status;
+    const customerAuth = await Auth.findOne({
+      userId: application.customer,
+      role: "customer",
+    }).select("_id");
 
+    // 🛎️ Notify agent/admin
+    await createNotification({
+      userId: application.assignedAgent,
+      userRole: application.assignedAgentRole,
+      title: "Onboarding Submitted",
+      message: `${customerAuth.firstName} has submitted their onboarding form.`,
+      type: "application",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    // 📓 Log action
     await logAction({
       type: "application",
-      action: "step_status_updated",
+      action: "onboarding_submitted",
       performedBy: req.user.id,
+      targetUser: customerAuth?._id || null,
       details: {
-        customer: customerId,
-        step: stepName,
-        newStatus: updatedStatus,
+        applicationId: application._id,
+        fieldsUpdated: Object.keys(req.body),
       },
     });
 
     res.status(200).json({
+      success: true,
+      message: "Application onboarding details submitted successfully.",
+      data: application,
+    });
+  } catch (err) {
+    console.error("Error in updateOnboardingDetails:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to submit onboarding details",
+      error: err.message,
+    });
+  }
+};
+
+export const updateApplication = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const updateFields = req.body;
+
+    // 1. Fetch application
+    const application = await Application.findOne({ applicationId });
+
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // ❌ Prevent update if locked
+    if (application.isLocked) {
+      return res.status(403).json({
+        message: "Application is locked and cannot be edited",
+      });
+    }
+
+    // 2. Apply updates from request body (agent/admin-level fields only)
+    const allowedFields = [
+      "applicationType",
+      "emirate",
+      "legalForm",
+      "proposedCompanyNamesEN",
+      "proposedCompanyNameAR",
+      "officeRequired",
+      "officeType",
+      "applicationNotes",
+      "totalAgreedCost",
+      "paymentEntries", // Repeatable group
+      "status",
+    ];
+
+    for (let key of allowedFields) {
+      if (updateFields[key] !== undefined) {
+        application[key] = updateFields[key];
+      }
+    }
+
+    await application.save();
+
+    const customerAuth = await Auth.findOne({
+      userId: application.customer,
+      role: "customer",
+    }).select("_id");
+
+    // 3. Log action
+    await logAction({
+      type: "application",
+      action: "application_updated_by_agent_admin",
+      performedBy: req.user.id,
+      targetUser: customerAuth?._id || null,
+      details: {
+        updatedFields: Object.keys(updateFields),
+        applicationId: application._id,
+      },
+    });
+
+    // 4. Notify customer
+    await createNotification({
+      userId: application.customer,
+      userRole: "customer",
+      title: "Application Updated",
+      message: `Your application (${applicationId}) was updated by our team.`,
+      type: "ApplicationUpdate",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Application updated successfully",
+      data: application,
+    });
+  } catch (error) {
+    console.error("Error updating application:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating application",
+      error: error.message,
+    });
+  }
+};
+
+//////////////////////////////////////////////Update Steps of workflow//////////////////////////////////////////////////////
+
+// API to approve the onboarding details provided by customer
+export const reviewApplicationAfterOnboarding = async (req, res) => {
+  const { applicationId } = req.params;
+  const { decision, note } = req.body; // decision = "approve" or "clarify"
+
+  try {
+    // Validate input
+    if (!["approve", "clarify"].includes(decision)) {
+      return res.status(400).json({ message: "Invalid decision type" });
+    }
+
+    // 1. Fetch application
+    const application = await Application.findById(applicationId);
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // 2. Determine and set new status
+    application.status =
+      decision === "approve"
+        ? "Ready for Processing"
+        : "Awaiting Client Response";
+
+    // 3. Store shared note if applicable
+    if (decision === "clarify") {
+      application.sharedNote = note || "Agent requested clarification.";
+    }
+
+    await application.save();
+
+    // 4. Log action
+    await logAction({
+      type: "application",
+      action: "application_reviewed",
+      performedBy: req.user.id,
+      targetUser: application.customer,
+      details: {
+        applicationId,
+        newStatus: application.status,
+        note: decision === "clarify" ? note : undefined,
+      },
+    });
+
+    // 5. Notify customer
+    await createNotification({
+      userId: application.customer,
+      userRole: "customer",
+      title:
+        decision === "approve"
+          ? "Application Approved"
+          : "Clarification Requested",
+      message:
+        decision === "approve"
+          ? `Your application (${application.applicationId}) has been approved.`
+          : `Your application (${application.applicationId}) requires clarification.`,
+      type: "ApplicationUpdate",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    res.status(200).json({
+      success: true,
+      message:
+        decision === "approve"
+          ? "Application marked as Ready for Processing"
+          : "Clarification requested from customer",
+      applicationStatus: application.status,
+    });
+  } catch (err) {
+    console.error("Review error:", err);
+    res.status(500).json({
+      success: false,
+      message: "Error reviewing application",
+      error: err.message,
+    });
+  }
+};
+
+// PATCH: Update Step Status by applicationId
+export const updateStepStatus = async (req, res) => {
+  const { applicationId } = req.params;
+  const { stepName, status } = req.body;
+
+  try {
+    if (!stepName || !status) {
+      return res
+        .status(400)
+        .json({ message: "stepName and status are required" });
+    }
+
+    const application = await Application.findById(applicationId);
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    const stepIndex = application.steps.findIndex(
+      (step) => step.stepName === stepName
+    );
+
+    if (stepIndex === -1) {
+      return res
+        .status(400)
+        .json({ message: `Step '${stepName}' not found in application.` });
+    }
+
+    // ✅ Update the step status
+    application.steps[stepIndex].status = status;
+    application.steps[stepIndex].updatedAt = new Date();
+
+    // ✅ Recalculate overall application status
+    application.status = calculateApplicationStatus(application.steps);
+
+    await application.save();
+
+    const customerAuth = await Auth.findOne({
+      userId: application.customer,
+      role: "customer",
+    }).select("_id");
+
+    // 🧾 Log the update
+    await logAction({
+      type: "application",
+      action: "step_status_updated",
+      performedBy: req.user.id,
+      targetUser: customerAuth?._id || null,
+      details: {
+        applicationId,
+        stepName,
+        newStatus: status,
+        updatedApplicationStatus: application.status,
+      },
+    });
+
+    if (application.status == "Completed") {
+      await createNotification({
+        userId: application.customer,
+        userRole: "customer",
+        title: `Application Completed`,
+        message: `Your company setup is complete. Documents are in dashboard.`,
+        type: "ApplicationUpdate",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+    } else {
+      await createNotification({
+        userId: application.customer,
+        userRole: "customer",
+        title: `Step Status Updated: ${stepName}`,
+        message: `The ${stepName} step in your application is now ${status}.`,
+        type: "ApplicationUpdate",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
       message: `Step "${stepName}" updated successfully`,
       application,
     });
   } catch (err) {
+    console.error("Error updating step:", err);
     res.status(500).json({
+      success: false,
       message: "Error updating step",
       error: err.message,
     });
   }
 };
 
+export const lockOrUnlockApplication = async (req, res) => {
+  const { applicationId } = req.params;
+  const { lock } = req.body; // Boolean: true = lock, false = unlock
+
+  try {
+    if (typeof lock !== "boolean") {
+      return res.status(400).json({ message: "`lock` must be true or false" });
+    }
+
+    const application = await Application.findById(applicationId);
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // Update lock status
+    application.isLocked = lock;
+    await application.save();
+
+    await logAction({
+      type: "application",
+      action: lock ? "application_locked" : "application_unlocked",
+      performedBy: req.user.id,
+      targetUser: application.customer,
+      details: {
+        applicationId: application._id,
+        newLockStatus: lock,
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: `Application has been ${lock ? "locked" : "unlocked"}`,
+      isLocked: application.isLocked,
+    });
+  } catch (err) {
+    console.error("Error locking/unlocking application:", err);
+    res.status(500).json({
+      success: false,
+      message: "Failed to update lock status",
+      error: err.message,
+    });
+  }
+};
+
+//////////////////////////////////////////Add application notes/////////////////////////////////////////////////////////
+
 export const addNote = async (req, res) => {
-  const { customerId } = req.params;
+  const { applicationId } = req.params;
   const { message } = req.body;
   const user = req.user;
 
   try {
-    const application = await Application.findOne({ customer: customerId });
+    const application = await Application.findOne({ applicationId });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
@@ -193,6 +524,7 @@ export const addNote = async (req, res) => {
     application.notes.push({
       message,
       addedBy: user?.userId,
+      addedByRole: user?.role,
       timestamp: new Date(),
     });
 
@@ -210,260 +542,7 @@ export const addNote = async (req, res) => {
   }
 };
 
-export const addVisaMember = async (req, res) => {
-  const { customerId } = req.params;
-  const { memberId } = req.body;
-
-  try {
-    const application = await Application.findOne({ customer: customerId });
-    if (!application) {
-      return res.status(404).json({ message: "Application not found" });
-    }
-
-    // Prevent duplicate member entries
-    const exists = application.visaSubSteps.find(
-      (v) => v.memberId && v.memberId.toString() === memberId
-    );
-    if (exists) {
-      return res.status(400).json({ message: "Member already added" });
-    }
-
-    // Add member without documents
-    const newMember = {
-      memberId,
-      status: "Submitted for Review",
-      updatedAt: new Date(),
-    };
-
-    application.visaSubSteps.push(newMember);
-    await application.save();
-
-    res.status(201).json({
-      message: "Visa member added successfully",
-      visaSubSteps: application.visaSubSteps,
-    });
-  } catch (err) {
-    console.error("Visa member add error:", err);
-    res.status(500).json({
-      message: "Error adding visa member",
-      error: err.message,
-    });
-  }
-};
-
-export const updateVisaMemberStatus = async (req, res) => {
-  const { appId, memberId } = req.params;
-  const { status } = req.body;
-
-  try {
-    const application = await Application.findById(appId);
-    if (!application)
-      return res.status(404).json({ message: "Application not found" });
-
-    const member = application.visaSubSteps.find(
-      (m) => m.memberId && m.memberId.toString() === memberId
-    );
-
-    if (!member)
-      return res.status(404).json({ message: "Visa member not found" });
-
-    if (!["Approved", "Rejected"].includes(status)) {
-      return res.status(400).json({ message: "Invalid status value" });
-    }
-
-    member.status = status;
-    member.updatedAt = new Date();
-
-    await application.save();
-
-    res.status(200).json({
-      message: `Visa member marked as ${status}`,
-      visaSubSteps: application.visaSubSteps,
-    });
-  } catch (err) {
-    console.error("Error updating visa member:", err);
-    res.status(500).json({
-      message: "Error updating visa member status",
-      error: err.message,
-    });
-  }
-};
-
-export const getVisaMemberDocuments = async (req, res) => {
-  const { customerId, memberId } = req.params;
-
-  try {
-    const documents = await Document.find({
-      linkedModel: "Customer",
-      linkedTo: customerId,
-      memberId: memberId,
-    }).sort({ createdAt: -1 });
-
-    res.status(200).json({
-      success: true,
-      data: documents,
-    });
-  } catch (err) {
-    console.error("Error fetching visa documents:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch visa member documents",
-      error: err.message,
-    });
-  }
-};
-
-export const getVisaMembersByCustomer = async (req, res) => {
-  const { customerId } = req.params;
-
-  console.log("getVisaMembersByCustomer called for customerId:", customerId);
-
-  try {
-    const application = await Application.findOne({ customer: customerId });
-
-    console.log("Application found:", application ? "Yes" : "No");
-    if (application) {
-      console.log(
-        "VisaSubSteps length:",
-        application.visaSubSteps?.length || 0
-      );
-      console.log("VisaSubSteps:", application.visaSubSteps);
-    }
-
-    if (!application) {
-      return res
-        .status(404)
-        .json({ message: "Application not found for this customer" });
-    }
-
-    res.status(200).json({
-      success: true,
-      visaMembers: application.visaSubSteps,
-    });
-  } catch (err) {
-    console.error("Error fetching visa members:", err);
-    res.status(500).json({
-      success: false,
-      message: "Failed to fetch visa members",
-      error: err.message,
-    });
-  }
-};
-
-export const updateOnboardingDetails = async (req, res) => {
-  const { customerId } = req.params;
-  const body = req.body;
-
-  console.log("customerId put: ", customerId);
-
-  const updateFields = {
-    firstName: body.customerName?.split(" ")[0] || "",
-    middleName: body.customerName?.split(" ")[1] || "",
-    lastName: body.customerName?.split(" ").slice(2).join(" ") || "",
-    dob: body.dateOfBirth,
-    email: body.emailAddress,
-    phoneNumber: body.phoneNumber,
-    nationality: body.nationality,
-    gender: body.gender,
-    permanentAddress: body.permanentAddress,
-    currentAddress: body.localAddress,
-    countryOfResidence: body.countryOfResidence,
-    sourceOfFund: body.sourceOfFund,
-    quotedPrice: body.quotedPrice,
-    paymentDetails: body.paymentDetails,
-    companyType: body.companyTypePreference,
-    jurisdiction: body.companyJurisdiction,
-    businessActivity1: body.businessActivity[0] || "",
-    officeType: body.officeType,
-    numberOfInvestors: Number(body.numberOfInvestors) || 1,
-    role: body.role,
-  };
-
-  try {
-    const customer = await Customer.findByIdAndUpdate(
-      customerId,
-      updateFields,
-      { new: true }
-    );
-
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
-
-    // ✅ Update application status
-    await Application.findOneAndUpdate(
-      { customer: customerId },
-      { status: "Waiting for Agent Review", sharedNote: null }
-    );
-
-    // ✅ Optional Optimization: Trigger auto-approval after onboarding
-    await autoApproveStepsIfDocsValid(customerId);
-
-    const updatedApp = await Application.findOne({ customer: customerId });
-
-    res.status(200).json({
-      success: true,
-      message: "Onboarding details submitted successfully",
-      data: customer,
-      applicationStatus: updatedApp?.status || "Waiting for Agent Review",
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: "Error updating onboarding info",
-      error: err.message,
-    });
-  }
-};
-
-export const reviewApplication = async (req, res) => {
-  const { applicationId } = req.params;
-  const { decision, note } = req.body;
-
-  try {
-    if (!["approve", "clarify"].includes(decision)) {
-      return res.status(400).json({ message: "Invalid decision type" });
-    }
-
-    const updated = await Application.findByIdAndUpdate(
-      applicationId,
-      {
-        status:
-          decision === "approve"
-            ? "Ready for Processing"
-            : "Awaiting Client Response",
-        sharedNote: decision === "clarify" ? note : undefined,
-      },
-      { new: true }
-    );
-
-    if (!updated) {
-      return res.status(404).json({ message: "Application not found" });
-    }
-
-    await logAction({
-      type: "application",
-      action: "application_reviewed",
-      performedBy: req.user.id,
-      details: { status: decision },
-    });
-
-    res.status(200).json({
-      success: true,
-      message:
-        decision === "approve"
-          ? "Application marked as Ready for Processing"
-          : "Clarification requested from customer",
-      data: updated,
-    });
-  } catch (err) {
-    res.status(500).json({
-      success: false,
-      message: "Error during application review",
-      error: err.message,
-    });
-  }
-};
+////////////////////////////////////////////Get request API's////////////////////////////////////////////////////////
 
 export const getApplicationById = async (req, res) => {
   const { appId } = req.params;
@@ -476,7 +555,6 @@ export const getApplicationById = async (req, res) => {
     const application = await Application.findById(appId)
       .populate("customer")
       .populate("assignedAgent")
-      .populate("visaSubSteps.memberId")
       .populate("notes.addedBy");
 
     if (!application) {
@@ -508,7 +586,6 @@ export const getApplicationByCustomerId = async (req, res) => {
     const application = await Application.findOne({ customer: customerId })
       .populate("customer")
       .populate("assignedAgent")
-      .populate("visaSubSteps")
       .populate("notes.addedBy");
 
     console.log("Application found:", application ? "Yes" : "No");
@@ -629,63 +706,6 @@ export const showApplicationWithStatus = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Failed to fetch application status",
-      error: err.message,
-    });
-  }
-};
-
-export const reviewApplicationAfterOnboarding = async (req, res) => {
-  const { applicationId } = req.params;
-  const { decision, note } = req.body; // decision = "approve" or "clarify"
-
-  try {
-    // Validate input
-    if (!["approve", "clarify"].includes(decision)) {
-      return res.status(400).json({ message: "Invalid decision type" });
-    }
-
-    const application = await Application.findById(applicationId);
-    if (!application) {
-      return res.status(404).json({ message: "Application not found" });
-    }
-
-    // Determine status change
-    application.status =
-      decision === "approve"
-        ? "Ready for Processing"
-        : "Awaiting Client Response";
-
-    // Store note if clarification requested
-    if (decision === "clarify") {
-      application.sharedNote = note || "Agent requested clarification.";
-    }
-
-    await application.save();
-
-    await logAction({
-      type: "application",
-      action: "review_after_onboarding",
-      performedBy: req.user.id,
-      details: {
-        applicationId,
-        newStatus: application.status,
-        note: decision === "clarify" ? note : undefined,
-      },
-    });
-
-    res.status(200).json({
-      success: true,
-      message:
-        decision === "approve"
-          ? "Application marked as Ready for Processing"
-          : "Clarification requested from customer",
-      applicationStatus: application.status,
-    });
-  } catch (err) {
-    console.error("Review error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Error reviewing application",
       error: err.message,
     });
   }

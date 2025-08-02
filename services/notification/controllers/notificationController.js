@@ -1,5 +1,52 @@
 import Notification from "../models/notificationModel.js";
 
+// 🆕 Get All Notifications with unread count and pagination
+export const getAllNotificationsForUser = async (req, res) => {
+  try {
+    const { page = 1, limit = 10 } = req.query;
+    const userId = req.user.id;
+    const userRole = req.user.role;
+
+    const skip = (parseInt(page) - 1) * parseInt(limit);
+
+    const notifications = await Notification.find({
+      userId,
+      userRole,
+    })
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(parseInt(limit));
+
+    const totalUnread = await Notification.countDocuments({
+      userId,
+      userRole,
+      status: "Unread",
+    });
+
+    const totalCount = await Notification.countDocuments({
+      userId,
+      userRole,
+    });
+
+    res.status(200).json({
+      success: true,
+      data: notifications,
+      meta: {
+        totalCount,
+        unreadCount: totalUnread,
+        currentPage: parseInt(page),
+        perPage: parseInt(limit),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({
+      success: false,
+      message: "Failed to fetch notifications",
+      error: err.message,
+    });
+  }
+};
+
 // 🟩 Get Notifications for Customer
 export const getCustomerNotifications = async (req, res) => {
   const customerId = req.params.customerId;

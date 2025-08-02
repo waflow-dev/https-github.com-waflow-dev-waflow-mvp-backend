@@ -1,66 +1,108 @@
 import mongoose from "mongoose";
 
-const investorSchema = new mongoose.Schema({
-  name: { type: String, required: true },
-  passportNumber: { type: String },
-  passportValidity: { type: String },
-  shareholdingPercentage: { type: Number },
-  role: { type: String },
-  visaRequired: { type: Boolean },
-  nationality: { type: String },
-  countryOfResidence: { type: String },
-  address: { type: String },
-  documents: {
-    passportCopy: { type: String },
-    passportPhoto: { type: String },
-    visaCopy: { type: String },
-    localAddressProof: { type: String },
+const addressSchema = new mongoose.Schema({
+  line1: { type: String, required: true },
+  line2: { type: String }, // optional
+  city: { type: String, required: true },
+  state: { type: String, required: true },
+  country: { type: String, required: true },
+  zipcode: {
+    type: String,
+    required: true,
+    match: [/^\d{4,10}$/, "Zipcode must be 4 to 10 digits"],
   },
 });
 
 const customerSchema = new mongoose.Schema(
   {
+    customerId: { type: String, unique: true }, // e.g. CX-0001
+
     assignedAgentId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: "Agent",
+      refPath: "assignedAgentRole",
       default: null,
     },
+    assignedAgentRole: {
+      type: String,
+      enum: ["admin", "agent"],
+      required: true,
+    },
 
-    // ✍️ Agent/Manager-Filled Fields (During creation)
-    firstName: { type: String, required: true },
-    middleName: { type: String },
-    lastName: { type: String, required: true },
-    dob: { type: Date, required: true },
-    email: { type: String, required: true, unique: true },
-    phoneNumber: { type: String, required: true },
-    currentAddress: { type: String },
-    permanentAddress: { type: String },
-    nationality: { type: String, required: true },
-    gender: { type: String, enum: ["male", "female", "other"], required: true },
-    designation: { type: String },
+    // Personal Details
+    firstName: {
+      type: String,
+      required: true,
+      maxlength: 50,
+      match: [/^[A-Za-z\s]+$/, "First name should contain alphabets only"],
+    },
+    middleName: {
+      type: String,
+      maxlength: 50,
+      match: [/^[A-Za-z\s]*$/, "Middle name should contain alphabets only"],
+    },
+    lastName: {
+      type: String,
+      required: true,
+      maxlength: 50,
+      match: [/^[A-Za-z\s]+$/, "Last name should contain alphabets only"],
+    },
+    dob: {
+      type: Date,
+      required: true,
+      validate: {
+        validator: function (value) {
+          return value < new Date();
+        },
+        message: "Date of birth must be a valid past date",
+      },
+    },
+    gender: {
+      type: String,
+      enum: ["male", "female", "other"],
+      required: true,
+    },
 
-    role: { type: String },
+    // Contact Details
+    email: {
+      type: String,
+      required: true,
+      unique: true,
+      match: [
+        /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/,
+        "Invalid email address",
+      ],
+    },
+    phoneNumber: {
+      type: String,
+      required: true,
+      match: [/^\d{7,15}$/, "Phone number must be 7 to 15 digits"],
+    },
 
-    companyType: { type: String },
-    jurisdiction: { type: String },
-    businessActivity1: { type: String }, // Main activity
-    officeType: { type: String },
+    // Address & Nationality
+    nationality: {
+      type: String,
+      required: true,
+    },
+    address: {
+      type: addressSchema,
+      required: true,
+    },
 
-    quotedPrice: { type: Number },
-    paymentPlans: [{ type: String }],
-    paymentDetails: { type: String },
+    // Government IDs
+    emiratesIdNumber: {
+      type: String,
+      match: [/^[a-zA-Z0-9]*$/, "Emirates ID must be alphanumeric"],
+    },
+    passportNumber: {
+      type: String,
+      required: true,
+      maxlength: 20,
+      match: [/^[a-zA-Z0-9]*$/, "Passport number must be alphanumeric"],
+    },
 
-    // 📝 Customer-Filled Fields (Post onboarding)
-    businessActivity2: { type: String },
-    businessActivity3: { type: String },
-    numberOfInvestors: { type: Number },
-    sourceOfFund: { type: String },
-    initialInvestment: { type: Number },
-    investorDetails: [investorSchema],
+    role: { type: String, default: "customer" },
   },
-  {
-    timestamps: true,
-  }
+  { timestamps: true }
 );
 
 export default mongoose.model("Customer", customerSchema);

@@ -1,4 +1,4 @@
-// ✅ documentVaultModel.js — Supports documentType + relatedStepName logic for auto-approval
+// ✅ documentVaultModel.js — Supports flexible document linking with manual approval workflow
 
 import mongoose from "mongoose";
 

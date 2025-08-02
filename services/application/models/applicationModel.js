@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 
+// 🪜 Step Schema (Retained)
 const stepSchema = new mongoose.Schema({
   stepName: { type: String, required: true },
   status: {
@@ -19,26 +20,65 @@ const stepSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-const visaSubStepSchema = new mongoose.Schema({
-  memberId: { type: String },
-  status: {
-    type: String,
-    enum: ["Submitted for Review", "Approved", "Rejected"],
-    default: "Submitted for Review",
-  },
-  updatedAt: { type: Date, default: Date.now },
-});
-
+// 📝 Notes schema (used by agents/managers)
 const noteSchema = new mongoose.Schema({
   message: String,
-  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
+  addedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: true,
+    refPath: "addedByRole",
+  },
+  addedByRole: {
+    type: String,
+    enum: ["agent", "admin"],
+    required: true,
+  },
   timestamp: { type: Date, default: Date.now },
 });
 
+// 📄 Payment Entry schema (repeatable group)
+const paymentEntrySchema = new mongoose.Schema({
+  paymentMethod: String,
+  amountPaid: Number,
+  paymentDate: Date,
+  transactionRefNo: String,
+  paymentStatus: String,
+  receiptUpload: String, // URL of file stored in Cloudinary or DB
+  additionalNotes: String,
+});
+
+// 🌐 Nature of Control - Enum List
+const natureOfControlEnum = [
+  "Shareholder",
+  "Voting Rights",
+  "Right to Appoint or Remove Directors",
+  "Control via Agreement or Arrangement",
+  "Significant Influence or Control",
+  "Beneficial Owner",
+  "Trustee",
+  "Other", // frontend will provide input if this is selected
+];
+
 const applicationSchema = new mongoose.Schema(
   {
-    customer: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
-    assignedAgent: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
+    applicationId: { type: String, unique: true }, // Will be like "APP-0001"
+
+    customer: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Customer",
+      required: true,
+    },
+
+    assignedAgent: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: "assignedAgentRole",
+    },
+    assignedAgentRole: {
+      type: String,
+      enum: ["admin", "agent"],
+      required: true,
+    },
+
     status: {
       type: String,
       enum: [
@@ -52,12 +92,111 @@ const applicationSchema = new mongoose.Schema(
       ],
       default: "New",
     },
+
+    // 📌 Agent/Manager-filled fields
+    applicationType: {
+      type: String,
+      enum: ["Mainland", "Freezone", "Offshore"],
+    },
+    emirate: {
+      type: String,
+      enum: [
+        "Dubai",
+        "Abu Dhabi",
+        "Sharjah",
+        "Ajman",
+        "RAK",
+        "Fujairah",
+        "UAQ",
+      ],
+    },
+    legalForm: {
+      type: String,
+      enum: [
+        "LLC",
+        "Sole Proprietorship",
+        "Civil Company",
+        "Branch",
+        "Holding",
+        "Freezone Company",
+      ],
+    },
+    proposedCompanyNamesEN: [{ type: String, required: true }], // multiple entries
+    proposedCompanyNameAR: { type: String },
+    officeRequired: { type: Boolean },
+    officeType: {
+      type: String,
+      enum: [
+        "Flexi Desk",
+        "Smart Office",
+        "Executive Office",
+        "Virtual Office",
+        "Warehouse",
+        "Retail Shop / Showroom",
+        "Business Centre Office",
+        "Shared Office / Co-working Space",
+      ],
+    },
+
+    totalAgreedCost: { type: Number },
+    paymentEntries: [paymentEntrySchema],
+
+    // 🧑‍💼 Customer-filled fields
+    businessActivities: [{ type: String }], // multiselect or autocomplete
+    numberOfShareholders: { type: Number },
+    basicInvestment: { type: Number },
+
+    sponsorRequired: { type: Boolean },
+    sponsorDetails: {
+      firstName: String,
+      middleName: String,
+      lastName: String,
+      nationality: String,
+      passportCopy: String, // file URL
+      emiratesId: String, // file URL
+      contactNumber: String,
+      address: String,
+      relationship: {
+        type: String,
+        enum: ["Individual", "Company", "Family", "Other"],
+      },
+    },
+
+    shareholderDetails: {
+      passportCopy: String,
+      emiratesId: String,
+      visaRequired: Boolean,
+      visaType: { type: String, enum: ["Investor", "Employee"] },
+      salary: Number,
+      passportPhoto: String,
+      nocLetter: String,
+      homeCountryAddress: {
+        line1: String,
+        line2: String,
+        state: String,
+        country: String,
+        zipcode: String,
+      },
+      uaeMobile: String,
+      homeMobile: String,
+      email: String,
+      nationality: String,
+      motherName: String,
+      fatherName: String,
+      sourceOfFunds: String,
+      shareholderName: String,
+      shareholderNationality: String,
+      shareholderPassportCopy: String,
+      ownershipPercentage: Number,
+      designation: String,
+      natureOfControl: [{ type: String, enum: natureOfControlEnum }],
+      natureOfControlOtherText: { type: String }, // only if "Other" selected
+    },
+
+    // 📝 Internal
     steps: [stepSchema],
-    sharedNote: { type: String },
-    visaSubSteps: [visaSubStepSchema],
     notes: [noteSchema],
     isLocked: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );

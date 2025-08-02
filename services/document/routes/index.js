@@ -46,7 +46,12 @@ router.get(
   authorizeRoles("agent", "admin", "manager"),
   getApplicationDocuments
 );
-router.get("/file/:id", serveDocumentFile);
+router.get(
+  "/file/:id",
+  authenticateToken,
+  authorizeRoles("agent", "admin", "manager"),
+  serveDocumentFile
+);
 
 // Add required documents endpoint
 router.get(

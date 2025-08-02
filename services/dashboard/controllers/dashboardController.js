@@ -14,11 +14,18 @@ export const getAdminDashboard = async (req, res) => {
       { $group: { _id: "$status", count: { $sum: 1 } } },
     ]);
 
+    const unreadNotifications = await Notification.countDocuments({
+      userId: req.user.id,
+      userRole: "admin",
+      status: "Unread",
+    });
+
     res.status(200).json({
       totalAgents,
       totalCustomers,
       totalApplications,
       applicationStatusCounts: statuses,
+      unreadNotificationCount: unreadNotifications,
     });
   } catch (err) {
     res
@@ -73,12 +80,10 @@ export const getAgentCustomerCount = async (req, res) => {
       customerCount: assignedCustomers.length,
     });
   } catch (err) {
-    res
-      .status(500)
-      .json({
-        message: "Failed to get agent customer count",
-        error: err.message,
-      });
+    res.status(500).json({
+      message: "Failed to get agent customer count",
+      error: err.message,
+    });
   }
 };
 

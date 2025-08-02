@@ -64,7 +64,7 @@ router.put(
 router.put(
   "/customer/:customerId",
   authenticateToken,
-  authorizeRoles("admin", "agent"),
+  authorizeRoles("admin", "agent", "customer"),
   updateCustomer
 );
 

@@ -589,13 +589,6 @@ export const getApplicationByCustomerId = async (req, res) => {
       .populate("notes.addedBy");
 
     console.log("Application found:", application ? "Yes" : "No");
-    if (application) {
-      console.log(
-        "VisaSubSteps length:",
-        application.visaSubSteps?.length || 0
-      );
-      console.log("VisaSubSteps:", application.visaSubSteps);
-    }
 
     if (!application) {
       return res.status(404).json({ message: "Application not found" });

@@ -8,7 +8,7 @@ import { logAction } from "../../audit logs/utils/logHelper.js";
 import { createNotification } from "../../notification/controllers/notificationController.js";
 import { generateCustomId } from "../utils/generateCustomId.js";
 
-///////////////////////////////////////Create Users///////////////////////////////////////////////////////////////////////////
+//////////////////////////////////////////CreateUsers///////////////////////////////////////////////////////////
 
 export const createCustomer = async (req, res) => {
   try {
@@ -179,7 +179,7 @@ export const createAdmin = async (req, res) => {
 
 export const getCustomerDetails = async (req, res) => {
   try {
-    const customerId = req.params.id;
+    const customerId = req.params.customerId;
 
     console.log("customerId", customerId);
 
@@ -356,6 +356,108 @@ export const updateAgent = async (req, res) => {
     res.status(500).json({
       success: false,
       message: "Error updating agent",
+      error: error.message,
+    });
+  }
+};
+
+export const updateCustomer = async (req, res) => {
+  try {
+    const { customerId } = req.params;
+    const {
+      firstName,
+      middleName,
+      lastName,
+      dob,
+      gender,
+      phoneNumber,
+      nationality,
+      passportNumber,
+      emiratesIdNumber,
+      address,
+      status,
+      password,
+    } = req.body;
+
+    if (!customerId) {
+      return res.status(400).json({ message: "Customer ID is required" });
+    }
+
+    // Prepare customer updates
+    const updateData = {};
+    if (firstName) updateData.firstName = firstName;
+    if (middleName) updateData.middleName = middleName;
+    if (lastName) updateData.lastName = lastName;
+    if (dob) updateData.dob = dob;
+    if (gender) updateData.gender = gender;
+    if (phoneNumber) updateData.phoneNumber = phoneNumber;
+    if (nationality) updateData.nationality = nationality;
+    if (passportNumber) updateData.passportNumber = passportNumber;
+    if (emiratesIdNumber) updateData.emiratesIdNumber = emiratesIdNumber;
+    if (address) updateData.address = address;
+
+    if (Object.keys(updateData).length === 0 && !password && !status) {
+      return res
+        .status(400)
+        .json({ message: "No valid fields provided for update" });
+    }
+
+    // Auth-level updates
+    const authUpdateData = {};
+    if (password) {
+      const passwordHash = await bcrypt.hash(password, 10);
+      authUpdateData.passwordHash = passwordHash;
+    }
+    if (status && ["active", "inactive"].includes(status)) {
+      authUpdateData.isActive = status === "active";
+    }
+
+    const updatedCustomer = await Customer.findByIdAndUpdate(
+      customerId,
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedCustomer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
+    const updatedAuth = await Auth.findOneAndUpdate(
+      { userId: customerId },
+      authUpdateData,
+      { new: true }
+    );
+
+    if (!updatedAuth) {
+      return res.status(404).json({ message: "Auth record not found" });
+    }
+
+    await logAction({
+      type: "user",
+      action: "customer_updated",
+      performedBy: req.user.id,
+      targetUser: customerId,
+      details: {
+        ...updateData,
+        ...(password && { passwordUpdated: true }),
+        ...(status && { newStatus: status }),
+      },
+    });
+
+    res.status(200).json({
+      success: true,
+      message: "Customer updated successfully",
+      data: updatedCustomer,
+      authData: {
+        email: updatedAuth.email,
+        isActive: updatedAuth.isActive,
+      },
+    });
+  } catch (error) {
+    console.error("Error updating customer:", error);
+    res.status(500).json({
+      success: false,
+      message: "Error updating customer",
       error: error.message,
     });
   }

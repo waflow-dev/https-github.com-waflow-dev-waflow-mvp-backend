@@ -591,7 +591,7 @@ export const getApplicationByCustomerId = async (req, res) => {
     console.log("Application found:", application ? "Yes" : "No");
 
     if (!application) {
-      return res.status(404).json({ message: "Application not found" });
+      return res.status(200).json({ message: "Application not created yet" });
     }
 
     res.status(200).json({

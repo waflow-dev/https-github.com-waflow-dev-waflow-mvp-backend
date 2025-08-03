@@ -37,8 +37,7 @@ export const createCustomer = async (req, res) => {
     console.log(assignedAgentId);
 
     const customer = await Customer.create({
-      assignedAgentId: assignedAgentId || req.user.id,
-      assignedAgentRole: req.user.role,
+      assignedAgentId: assignedAgentId,
       firstName,
       middleName,
       lastName,
@@ -411,6 +410,7 @@ export const updateCustomer = async (req, res) => {
     if (status && ["active", "inactive"].includes(status)) {
       authUpdateData.isActive = status === "active";
     }
+    console.log(authUpdateData.isActive);
 
     const updatedCustomer = await Customer.findByIdAndUpdate(
       customerId,
@@ -427,6 +427,7 @@ export const updateCustomer = async (req, res) => {
       authUpdateData,
       { new: true }
     );
+    console.log(updatedAuth);
 
     if (!updatedAuth) {
       return res.status(404).json({ message: "Auth record not found" });

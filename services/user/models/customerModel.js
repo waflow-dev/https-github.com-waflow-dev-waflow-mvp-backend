@@ -19,13 +19,8 @@ const customerSchema = new mongoose.Schema(
 
     assignedAgentId: {
       type: mongoose.Schema.Types.ObjectId,
-      refPath: "assignedAgentRole",
+      ref: "agent",
       default: null,
-    },
-    assignedAgentRole: {
-      type: String,
-      enum: ["admin", "agent"],
-      required: true,
     },
 
     // Personal Details

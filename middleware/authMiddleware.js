@@ -13,10 +13,13 @@ export const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    console.log("Header token:", token);
     const userId = decoded.id;
+    console.log("Decoded ID:", decoded.id);
 
     // 1. Validate token from Redis
     const redisToken = await redis.get(`session:${userId}`);
+    console.log("Redis token:", redisToken);
     if (!redisToken || redisToken !== token) {
       return res
         .status(403)
@@ -25,10 +28,8 @@ export const authenticateToken = async (req, res, next) => {
 
     // 2. Fetch cached user (if available)
     let userData = await redis.get(`user:${userId}`);
-    let user;
-
     if (userData) {
-      user = JSON.parse(userData);
+      console.log("[Redis] Raw user string:", userData);
     } else {
       const userAuth = await Auth.findOne({ userId }).select("-password");
       if (!userAuth) {
@@ -37,15 +38,17 @@ export const authenticateToken = async (req, res, next) => {
           .json({ message: "Unauthorized: User not found" });
       }
 
-      user = userAuth;
+      const user = userAuth.toObject();
 
       // Re-cache user
-      await redis.set(`user:${userId}`, JSON.stringify(user), { ex: 86400 });
+      await redis.set(`user:${userId}`, JSON.stringify(userData), {
+        ex: 86400,
+      });
     }
 
     // 3. Attach to request
-    req.user = user;
-    req.user.id = user.userId?.toString() || user._id?.toString();
+    req.user = userData;
+    req.user.id = userData.userId?.toString() || userData._id?.toString();
 
     next();
   } catch (err) {

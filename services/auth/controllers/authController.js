@@ -38,13 +38,13 @@ export const loginUser = async (req, res) => {
 
     switch (role) {
       case "admin":
-        user = await Admin.findById(userId);
+        user = await Admin.findById(userId).lean();
         break;
       case "agent":
-        user = await Agent.findById(userId);
+        user = await Agent.findById(userId).lean();
         break;
       case "customer":
-        user = await Customer.findById(userId);
+        user = await Customer.findById(userId).lean();
         break;
       default:
         return res.status(400).json({ message: "Invalid user role" });
@@ -54,17 +54,12 @@ export const loginUser = async (req, res) => {
       return res.status(404).json({ message: "User profile not found" });
     }
 
-    if (!user) {
-      return res.status(404).json({ message: "User profile not found" });
-    }
-
-    await redis.set(`session:${userAuth.userId}`, token, {
-      ex: 86400,
-    }); // 1 day
-
+    await redis.set(`session:${userAuth.userId}`, token, { ex: 86400 }); // 1 day
     await redis.set(`user:${userAuth.userId}`, JSON.stringify(user), {
       ex: 86400,
-    }); // 1 day
+    });
+
+    console.log("Stringified data :", JSON.stringify(user));
 
     await logAction({
       type: "auth",
@@ -170,7 +165,8 @@ export const resetPassword = async (req, res) => {
 
 export const getProfile = async (req, res) => {
   try {
-    const user = await Auth.findOne({ userId: req.user.userId });
+    // console.log("Inside Get Profile", req.user.id, req.user);
+    const user = await Auth.findOne({ userId: req.user.id });
     if (!user) return res.status(404).json({ message: "User not found" });
 
     res.status(200).json({ user });

@@ -49,6 +49,8 @@ export const loginUser = async (req, res) => {
       default:
         return res.status(400).json({ message: "Invalid user role" });
     }
+    console.log("User: ", user);
+    user.role = userAuth.role;
 
     if (!user) {
       return res.status(404).json({ message: "User profile not found" });

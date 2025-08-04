@@ -394,6 +394,9 @@ export const updateCustomer = async (req, res) => {
     if (passportNumber) updateData.passportNumber = passportNumber;
     if (emiratesIdNumber) updateData.emiratesIdNumber = emiratesIdNumber;
     if (address) updateData.address = address;
+    if (status && ["active", "inactive"].includes(status)) {
+      updateData.status = status;
+    }
 
     if (Object.keys(updateData).length === 0 && !password && !status) {
       return res
@@ -410,7 +413,6 @@ export const updateCustomer = async (req, res) => {
     if (status && ["active", "inactive"].includes(status)) {
       authUpdateData.isActive = status === "active";
     }
-    console.log(authUpdateData.isActive);
 
     const updatedCustomer = await Customer.findByIdAndUpdate(
       customerId,

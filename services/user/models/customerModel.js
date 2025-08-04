@@ -96,6 +96,7 @@ const customerSchema = new mongoose.Schema(
     },
 
     role: { type: String, default: "customer" },
+    status: { type: String, enum: ["active", "inactive"], default: "active" },
   },
   { timestamps: true }
 );

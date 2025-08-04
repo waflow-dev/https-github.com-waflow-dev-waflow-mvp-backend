@@ -1,9 +1,13 @@
 import { generateResetToken } from "../utils/generateResetToken.js";
 import Auth from "../models/authModel.js";
+import Admin from "../../user/models/adminModel.js";
+import Agent from "../../user/models/agentModel.js";
+import Customer from "../../user/models/customerModel.js";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import sendEmail from "../../notification/utils/sendEmail.js";
+import redis from "../../../utils/redisClient.js";
 
 export const loginUser = async (req, res) => {
   const { email, password } = req.body;
@@ -28,10 +32,44 @@ export const loginUser = async (req, res) => {
       { expiresIn: "1d" }
     );
 
+    // ✅ Fetch role-specific user profile
+    let user;
+    const { role, userId } = userAuth;
+
+    switch (role) {
+      case "admin":
+        user = await Admin.findById(userId);
+        break;
+      case "agent":
+        user = await Agent.findById(userId);
+        break;
+      case "customer":
+        user = await Customer.findById(userId);
+        break;
+      default:
+        return res.status(400).json({ message: "Invalid user role" });
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User profile not found" });
+    }
+
+    if (!user) {
+      return res.status(404).json({ message: "User profile not found" });
+    }
+
+    await redis.set(`session:${userAuth.userId}`, token, {
+      ex: 86400,
+    }); // 1 day
+
+    await redis.set(`user:${userAuth.userId}`, JSON.stringify(user), {
+      ex: 86400,
+    }); // 1 day
+
     await logAction({
       type: "auth",
       action: "login_success",
-      performedBy: userAuth.userId,
+      performedBy: userId,
       details: { ip: req.ip },
     });
 
@@ -42,6 +80,30 @@ export const loginUser = async (req, res) => {
     });
   } catch (err) {
     res.status(500).json({ message: "Server error", error: err.message });
+  }
+};
+
+export const logoutUser = async (req, res) => {
+  const userId = req.user.id;
+
+  try {
+    await redis.del(`session:${userId}`);
+    await redis.del(`user:${userId}`);
+
+    await logAction({
+      type: "auth",
+      action: "logout",
+      performedBy: userId,
+      details: { ip: req.ip },
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "User logged out successfully",
+    });
+  } catch (error) {
+    console.error("Logout error:", error);
+    return res.status(500).json({ success: false, message: "Logout failed" });
   }
 };
 

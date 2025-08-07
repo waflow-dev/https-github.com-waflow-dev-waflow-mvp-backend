@@ -52,7 +52,12 @@ router.get(
 
 router.get("/customers", authenticateToken, getAllCustomers);
 
-router.get("/agents", authenticateToken, authorizeRoles("admin", "manager"), getAllAgents);
+router.get(
+  "/agents",
+  authenticateToken,
+  authorizeRoles("admin", "admin"),
+  getAllAgents
+);
 
 router.put(
   "/agent/:agentId",

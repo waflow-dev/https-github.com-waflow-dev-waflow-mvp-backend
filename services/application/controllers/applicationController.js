@@ -1,5 +1,8 @@
 import Application from "../models/applicationModel.js";
 import Customer from "../../user/models/customerModel.js";
+import Agent from "../../user/models/agentModel.js";
+import Admin from "../../user/models/adminModel.js";
+import Auth from "../../auth/models/authModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import { createNotification } from "../../notification/controllers/notificationController.js";
 import workflowConfig from "../utils/workflowConfig.js";
@@ -219,7 +222,6 @@ export const updateApplication = async (req, res) => {
       return res.status(404).json({ message: "Application not found" });
     }
 
-    // ❌ Prevent update if locked
     if (application.isLocked) {
       return res.status(403).json({
         message: "Application is locked and cannot be edited",
@@ -239,6 +241,8 @@ export const updateApplication = async (req, res) => {
       "totalAgreedCost",
       "paymentEntries", // Repeatable group
       "status",
+      "assignedAgent",
+      "assignedAgentRole",
     ];
 
     for (let key of allowedFields) {
@@ -552,13 +556,55 @@ export const getApplicationById = async (req, res) => {
   console.log("Fetching application for user:", user);
 
   try {
-    const application = await Application.findById(appId)
-      .populate("customer")
-      .populate("assignedAgent")
-      .populate("notes.addedBy");
+    const application = await Application.findOne({ _id: appId })
+      .populate("customer");
 
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
+    }
+
+    // Manually populate assignedAgent based on assignedAgentRole
+    if (application.assignedAgent && application.assignedAgentRole) {
+      try {
+        if (application.assignedAgentRole === "agent") {
+          const agent = await Agent.findById(application.assignedAgent).select(
+            "fullName email"
+          );
+          application.assignedAgent = agent;
+        } else if (application.assignedAgentRole === "admin") {
+          const admin = await Admin.findById(application.assignedAgent).select(
+            "fullName email"
+          );
+          application.assignedAgent = admin;
+        }
+      } catch (error) {
+        console.error("Error populating assignedAgent:", error);
+        application.assignedAgent = null;
+      }
+    }
+
+    // Manually populate notes.addedBy based on addedByRole
+    if (application.notes && application.notes.length > 0) {
+      for (let note of application.notes) {
+        if (note.addedBy && note.addedByRole) {
+          try {
+            if (note.addedByRole === "agent") {
+              const agent = await Agent.findById(note.addedBy).select(
+                "fullName email"
+              );
+              note.addedBy = agent;
+            } else if (note.addedByRole === "admin") {
+              const admin = await Admin.findById(note.addedBy).select(
+                "fullName email"
+              );
+              note.addedBy = admin;
+            }
+          } catch (error) {
+            console.error("Error populating note.addedBy:", error);
+            note.addedBy = null;
+          }
+        }
+      }
     }
 
     res.status(200).json({
@@ -584,14 +630,56 @@ export const getApplicationByCustomerId = async (req, res) => {
 
   try {
     const application = await Application.findOne({ customer: customerId })
-      .populate("customer")
-      .populate("assignedAgent")
-      .populate("notes.addedBy");
+      .populate("customer");
 
     console.log("Application found:", application ? "Yes" : "No");
 
     if (!application) {
       return res.status(200).json({ message: "Application not created yet" });
+    }
+
+    // Manually populate assignedAgent based on assignedAgentRole
+    if (application.assignedAgent && application.assignedAgentRole) {
+      try {
+        if (application.assignedAgentRole === "agent") {
+          const agent = await Agent.findById(application.assignedAgent).select(
+            "fullName email"
+          );
+          application.assignedAgent = agent;
+        } else if (application.assignedAgentRole === "admin") {
+          const admin = await Admin.findById(application.assignedAgent).select(
+            "fullName email"
+          );
+          application.assignedAgent = admin;
+        }
+      } catch (error) {
+        console.error("Error populating assignedAgent:", error);
+        application.assignedAgent = null;
+      }
+    }
+
+    // Manually populate notes.addedBy based on addedByRole
+    if (application.notes && application.notes.length > 0) {
+      for (let note of application.notes) {
+        if (note.addedBy && note.addedByRole) {
+          try {
+            if (note.addedByRole === "agent") {
+              const agent = await Agent.findById(note.addedBy).select(
+                "fullName email"
+              );
+              note.addedBy = agent;
+            } else if (note.addedByRole === "admin") {
+              const admin = await Admin.findById(note.addedBy).select(
+                "fullName email"
+              );
+              note.addedBy = admin;
+            }
+          } catch (error) {
+            console.error("Error populating note.addedBy:", error);
+            note.addedBy = null;
+          }
+        }
+      }
     }
 
     res.status(200).json({
@@ -625,12 +713,39 @@ export const getAllApplications = async (req, res) => {
 
     const applications = await Application.find(query)
       .populate("customer", "firstName lastName email phoneNumber")
-      .populate("assignedAgent", "fullName email")
       .sort({ createdAt: -1 });
+
+    // Manually populate assignedAgent based on assignedAgentRole
+    const populatedApplications = await Promise.all(
+      applications.map(async (app) => {
+        const appObj = app.toObject();
+
+        if (app.assignedAgent && app.assignedAgentRole) {
+          try {
+            if (app.assignedAgentRole === "agent") {
+              const agent = await Agent.findById(app.assignedAgent).select(
+                "fullName email"
+              );
+              appObj.assignedAgent = agent;
+            } else if (app.assignedAgentRole === "admin") {
+              const admin = await Admin.findById(app.assignedAgent).select(
+                "fullName email"
+              );
+              appObj.assignedAgent = admin;
+            }
+          } catch (error) {
+            console.error("Error populating assignedAgent:", error);
+            appObj.assignedAgent = null;
+          }
+        }
+
+        return appObj;
+      })
+    );
 
     res.status(200).json({
       success: true,
-      data: applications,
+      data: populatedApplications,
     });
   } catch (error) {
     console.error("[DEBUG] Error in getAllApplications:", error);

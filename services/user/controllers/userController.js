@@ -59,6 +59,12 @@ export const createCustomer = async (req, res) => {
       role: "customer",
     });
 
+    await sendEmail(
+      email,
+      "Account created",
+      `Your account has been successfully created, please login.`
+    );
+
     await logAction({
       type: "user",
       action: "customer_created",
@@ -115,6 +121,12 @@ export const createAgent = async (req, res) => {
       role: "agent",
     });
 
+    await sendEmail(
+      email,
+      "Account created",
+      `Your account has been successfully created, please login.`
+    );
+
     await logAction({
       type: "user",
       action: "agent_created",
@@ -157,6 +169,12 @@ export const createAdmin = async (req, res) => {
       passwordHash,
       role: "admin",
     });
+
+    await sendEmail(
+      email,
+      "Account created",
+      `Your account has been successfully created, please login.`
+    );
 
     await logAction({
       type: "user",

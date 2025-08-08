@@ -556,8 +556,9 @@ export const getApplicationById = async (req, res) => {
   console.log("Fetching application for user:", user);
 
   try {
-    const application = await Application.findOne({ _id: appId })
-      .populate("customer");
+    const application = await Application.findOne({
+      applicationId: appId,
+    }).populate("customer");
 
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
@@ -629,8 +630,9 @@ export const getApplicationByCustomerId = async (req, res) => {
   console.log("Fetching application for customerId:", customerId);
 
   try {
-    const application = await Application.findOne({ customer: customerId })
-      .populate("customer");
+    const application = await Application.findOne({
+      customer: customerId,
+    }).populate("customer");
 
     console.log("Application found:", application ? "Yes" : "No");
 

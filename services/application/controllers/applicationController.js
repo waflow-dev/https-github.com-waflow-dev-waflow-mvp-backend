@@ -50,12 +50,12 @@ export const createApplication = async (req, res) => {
       return res.status(404).json({ message: "Customer not found" });
     }
 
-    const existing = await Application.findOne({ customer: customer._id });
-    if (existing) {
-      return res
-        .status(400)
-        .json({ message: "Application already exists for this customer." });
-    }
+    // const existing = await Application.findOne({ customer: customer._id });
+    // if (existing) {
+    //   return res
+    //     .status(400)
+    //     .json({ message: "Application already exists for this customer." });
+    // }
 
     const stepsFromConfig = workflowConfig[applicationType?.toLowerCase()];
 

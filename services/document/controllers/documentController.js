@@ -28,23 +28,23 @@ const calculateApplicationStatus = (steps) => {
 
 export const createDocument = async (req, res) => {
   const user = req.user;
-  // const file = req.file;
+  const file = req.file;
 
-  // if (!file) {
-  //   return res.status(400).json({ message: "File is required (image or PDF)" });
-  // }
+  if (!file) {
+    return res.status(400).json({ message: "File is required (image or PDF)" });
+  }
 
   try {
-    // const ext = file.originalname.split(".").pop().toLowerCase();
-    // const cloudinaryResult = await uploadToCloudinaryFromBuffer(
-    //   file.buffer,
-    //   ext
-    // );
-    // // const cloudinaryResult = await uploadOnCloudinary(file.path);
-    // const uploadedFileUrl =
-    //   cloudinaryResult?.secure_url || cloudinaryResult?.url;
-    // if (!uploadedFileUrl)
-    //   return res.status(500).json({ message: "File upload failed" });
+    const ext = file.originalname.split(".").pop().toLowerCase();
+    const cloudinaryResult = await uploadToCloudinaryFromBuffer(
+      file.buffer,
+      ext
+    );
+    // const cloudinaryResult = await uploadOnCloudinary(file.path);
+    const uploadedFileUrl =
+      cloudinaryResult?.secure_url || cloudinaryResult?.url;
+    if (!uploadedFileUrl)
+      return res.status(500).json({ message: "File upload failed" });
 
     const {
       documentName,
@@ -52,7 +52,6 @@ export const createDocument = async (req, res) => {
       relatedStepName,
       linkedModel,
       expiryDate,
-      uploadedFileUrl,
       notes,
       applicationId,
       memberId,
@@ -127,7 +126,7 @@ export const createDocument = async (req, res) => {
       if (docCount === 1) {
         const app = await Application.findById(applicationId);
         if (app && app.status === "New") {
-          app.status = "Submitted for Review";
+          app.status = "Waiting for Agent Review";
           await app.save();
         }
       }

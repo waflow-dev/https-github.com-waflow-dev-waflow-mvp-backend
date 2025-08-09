@@ -67,17 +67,8 @@ export const createDocument = async (req, res) => {
 
     console.log(user);
 
-    const authUser = await Auth.findById(user.userId);
-    console.log("authUser", authUser);
-    let profile;
-
-    if (user.role === "admin") {
-      profile = await Admin.findById(user.userId);
-    } else if (authUser.role === "agent") {
-      profile = await Agent.findById(user.userId);
-    } else {
-      profile = await Customer.findById(user.userId);
-    }
+    // const authUser = await Auth.findById(user.userId);
+    // console.log("authUser", authUser);
 
     // const linkedTo =
     //   linkedModel === "Application" ? applicationId : user?.user.id;

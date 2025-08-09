@@ -1,5 +1,9 @@
 import Document from "../models/documentVaultModel.js";
 import Application from "../../application/models/applicationModel.js";
+import Customer from "../../user/models/customerModel.js";
+import Admin from "../../user/models/adminModel.js";
+import Agent from "../../user/models/agentModel.js";
+import Auth from "../../auth/models/authModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
 import { uploadToCloudinaryFromBuffer } from "../utils/cloudinary.js";
 import workflowConfig from "../../application/utils/workflowConfig.js";
@@ -24,23 +28,23 @@ const calculateApplicationStatus = (steps) => {
 
 export const createDocument = async (req, res) => {
   const user = req.user;
-  const file = req.file;
+  // const file = req.file;
 
-  if (!file) {
-    return res.status(400).json({ message: "File is required (image or PDF)" });
-  }
+  // if (!file) {
+  //   return res.status(400).json({ message: "File is required (image or PDF)" });
+  // }
 
   try {
-    const ext = file.originalname.split(".").pop().toLowerCase();
-    const cloudinaryResult = await uploadToCloudinaryFromBuffer(
-      file.buffer,
-      ext
-    );
-    // const cloudinaryResult = await uploadOnCloudinary(file.path);
-    const uploadedFileUrl =
-      cloudinaryResult?.secure_url || cloudinaryResult?.url;
-    if (!uploadedFileUrl)
-      return res.status(500).json({ message: "File upload failed" });
+    // const ext = file.originalname.split(".").pop().toLowerCase();
+    // const cloudinaryResult = await uploadToCloudinaryFromBuffer(
+    //   file.buffer,
+    //   ext
+    // );
+    // // const cloudinaryResult = await uploadOnCloudinary(file.path);
+    // const uploadedFileUrl =
+    //   cloudinaryResult?.secure_url || cloudinaryResult?.url;
+    // if (!uploadedFileUrl)
+    //   return res.status(500).json({ message: "File upload failed" });
 
     const {
       documentName,
@@ -48,6 +52,7 @@ export const createDocument = async (req, res) => {
       relatedStepName,
       linkedModel,
       expiryDate,
+      uploadedFileUrl,
       notes,
       applicationId,
       memberId,
@@ -61,8 +66,30 @@ export const createDocument = async (req, res) => {
       }
     }
 
-    const linkedTo =
-      linkedModel === "Application" ? applicationId : user?.userId;
+    console.log(user);
+
+    const authUser = await Auth.findById(user.userId);
+    console.log("authUser", authUser);
+    let profile;
+
+    if (user.role === "admin") {
+      profile = await Admin.findById(user.userId);
+    } else if (authUser.role === "agent") {
+      profile = await Agent.findById(user.userId);
+    } else {
+      profile = await Customer.findById(user.userId);
+    }
+
+    // const linkedTo =
+    //   linkedModel === "Application" ? applicationId : user?.user.id;
+
+    let linkedTo;
+
+    if (linkedModel == "Application") {
+      linkedTo = applicationId;
+    }
+
+    console.log(user.id);
 
     const newDoc = await Document.create({
       documentName,
@@ -71,7 +98,7 @@ export const createDocument = async (req, res) => {
       linkedTo,
       linkedModel,
       fileUrl: uploadedFileUrl,
-      userId: user?.userId,
+      userId: user.id,
       expiryDate,
       notes,
       memberId,

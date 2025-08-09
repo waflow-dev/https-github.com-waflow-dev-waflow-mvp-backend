@@ -19,7 +19,7 @@ router.post(
   "/create-document",
   authenticateToken,
   authorizeRoles("customer", "agent", "admin", "manager"),
-  upload.single("file"),
+  // upload.single("file"),
   createDocument
 );
 router.put(

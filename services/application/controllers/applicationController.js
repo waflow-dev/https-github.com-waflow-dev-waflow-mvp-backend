@@ -7,6 +7,7 @@ import { logAction } from "../../audit logs/utils/logHelper.js";
 import { createNotification } from "../../notification/controllers/notificationController.js";
 import workflowConfig from "../utils/workflowConfig.js";
 import Document from "../../document/models/documentVaultModel.js";
+import jwt from "jsonwebtoken";
 
 ////////////////////////////////////////Helper Function////////////////////////////////////////////////////////////////
 
@@ -376,53 +377,56 @@ export const reviewApplicationAfterOnboarding = async (req, res) => {
   }
 };
 
-// PATCH: Update Step Status by applicationId
+// PATCH: Update Step Status by customerId
 export const updateStepStatus = async (req, res) => {
   const { applicationId } = req.params;
   const { stepName, status } = req.body;
+  const token = req.headers.authorization?.split(" ")[1];
 
   try {
-    if (!stepName || !status) {
-      return res
-        .status(400)
-        .json({ message: "stepName and status are required" });
+    if (!token) {
+      return res.status(401).json({ error: "No token provided" });
     }
 
-    const application = await Application.findById(applicationId);
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const userId = decoded.userId;
+
+    const app = await ApplidById(applicationId);
     if (!application) {
-      return res.status(404).json({ message: "Application not found" });
+      return res.status(404).json({ error: "Application not found" });
     }
 
-    const stepIndex = application.steps.findIndex(
-      (step) => step.stepName === stepName
+    // Find the step to update
+    const stepToUpdate = application.steps.find(
+      (step) => step.title === stepName
     );
 
-    if (stepIndex === -1) {
-      return res
-        .status(400)
-        .json({ message: `Step '${stepName}' not found in application.` });
+    if (!stepToUpdate) {
+      return res.status(404).json({ error: "Step not found" });
     }
 
-    // ✅ Update the step status
-    application.steps[stepIndex].status = status;
-    application.steps[stepIndex].updatedAt = new Date();
+    // Update step status
+    stepToUpdate.status = status;
+    stepToUpdate.completedAt = status === "completed" ? new Date() : null;
 
-    // ✅ Recalculate overall application status
-    application.status = calculateApplicationStatus(application.steps);
+    // Update application status based on step completion
+    if (status === "completed") {
+      const allStepsCompleted = application.steps.every(
+        (step) => step.status === "completed"
+      );
+      if (allStepsCompleted) {
+        application.status = "completed";
+      }
+    }
 
     await application.save();
 
-    const customerAuth = await Auth.findOne({
-      userId: application.customer,
-      role: "customer",
-    }).select("_id");
-
-    // 🧾 Log the update
+    // Log the action
     await logAction({
       type: "application",
       action: "step_status_updated",
-      performedBy: req.user.id,
-      targetUser: customerAuth?._id || null,
+      performedBy: userId,
+      targetUser: application.customer,
       details: {
         applicationId,
         stepName,
@@ -431,40 +435,14 @@ export const updateStepStatus = async (req, res) => {
       },
     });
 
-    if (application.status == "Completed") {
-      await createNotification({
-        userId: application.customer,
-        userRole: "customer",
-        title: `Application Completed`,
-        message: `Your company setup is complete. Documents are in dashboard.`,
-        type: "ApplicationUpdate",
-        referenceId: application._id,
-        referenceType: "Application",
-      });
-    } else {
-      await createNotification({
-        userId: application.customer,
-        userRole: "customer",
-        title: `Step Status Updated: ${stepName}`,
-        message: `The ${stepName} step in your application is now ${status}.`,
-        type: "ApplicationUpdate",
-        referenceId: application._id,
-        referenceType: "Application",
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: `Step "${stepName}" updated successfully`,
-      application,
+    res.json({
+      message: "Step status updated successfully",
+      step: stepToUpdate,
+      applicationStatus: application.status,
     });
-  } catch (err) {
-    console.error("Error updating step:", err);
-    res.status(500).json({
-      success: false,
-      message: "Error updating step",
-      error: err.message,
-    });
+  } catch (error) {
+    console.error("Error updating step status:", error);
+    res.status(500).json({ error: "Internal server error" });
   }
 };
 

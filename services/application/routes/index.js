@@ -49,7 +49,7 @@ router.patch(
 
 // Update application step status — agent/admin
 router.patch(
-  "/stepStatus/:customerId",
+  "/step-status/:customerId",
   authenticateToken,
   authorizeRoles("agent", "admin"),
   updateStepStatus

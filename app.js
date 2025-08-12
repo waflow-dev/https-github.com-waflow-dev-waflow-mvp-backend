@@ -13,11 +13,11 @@ import notificationRoutes from "./services/notification/routes/index.js";
 
 dotenv.config();
 
-
 const allowedOrigins = [
   "https://waflow-frontend.vercel.app",
   "http://localhost:5173",
-  "http://localhost:8080"
+  "http://localhost:8080",
+  "https://app.waflow.ae",
 ];
 
 const corsHeaders = (req, res, next) => {
@@ -26,7 +26,10 @@ const corsHeaders = (req, res, next) => {
     res.header("Access-Control-Allow-Origin", origin);
   }
   res.header("Access-Control-Allow-Credentials", "true");
-  res.header("Access-Control-Allow-Methods", "GET,PUT,POST,DELETE,OPTIONS,PATCH");
+  res.header(
+    "Access-Control-Allow-Methods",
+    "GET,PUT,POST,DELETE,OPTIONS,PATCH"
+  );
   res.header(
     "Access-Control-Allow-Headers",
     "Origin, X-Requested-With, Content-Type, Accept, Authorization"

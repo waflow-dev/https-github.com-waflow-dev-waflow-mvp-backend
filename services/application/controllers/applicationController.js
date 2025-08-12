@@ -140,7 +140,9 @@ export const updateOnboardingDetails = async (req, res) => {
   } = req.body;
 
   try {
-    const application = await Application.findById(applicationId);
+    const application = await Application.findOne({
+      applicationId: applicationId,
+    });
 
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
@@ -311,7 +313,9 @@ export const reviewApplicationAfterOnboarding = async (req, res) => {
     }
 
     // 1. Fetch application
-    const application = await Application.findById(applicationId);
+    const application = await Application.findOne({
+      applicationId: applicationId,
+    });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
@@ -381,25 +385,44 @@ export const reviewApplicationAfterOnboarding = async (req, res) => {
 export const updateStepStatus = async (req, res) => {
   const { applicationId } = req.params;
   const { stepName, status } = req.body;
-  const token = req.headers.authorization?.split(" ")[1];
+
+  console.log("🔍 updateStepStatus called with:", {
+    applicationId,
+    stepName,
+    status,
+    body: req.body,
+    params: req.params,
+  });
 
   try {
-    if (!token) {
-      return res.status(401).json({ error: "No token provided" });
-    }
+    const application = await Application.findOne({
+      applicationId: applicationId,
+    });
 
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const userId = decoded.userId;
+    console.log("🔍 Application search result:", {
+      found: !!application,
+      applicationId: application?.applicationId,
+      stepsCount: application?.steps?.length,
+      steps: application?.steps?.map((s) => ({
+        stepName: s.stepName,
+        status: s.status,
+      })),
+    });
 
-    const app = await ApplidById(applicationId);
     if (!application) {
       return res.status(404).json({ error: "Application not found" });
     }
 
     // Find the step to update
     const stepToUpdate = application.steps.find(
-      (step) => step.title === stepName
+      (step) => step.stepName === stepName
     );
+
+    console.log("🔍 Step search result:", {
+      stepName,
+      stepFound: !!stepToUpdate,
+      stepDetails: stepToUpdate,
+    });
 
     if (!stepToUpdate) {
       return res.status(404).json({ error: "Step not found" });
@@ -407,15 +430,15 @@ export const updateStepStatus = async (req, res) => {
 
     // Update step status
     stepToUpdate.status = status;
-    stepToUpdate.completedAt = status === "completed" ? new Date() : null;
+    stepToUpdate.updatedAt = new Date();
 
     // Update application status based on step completion
-    if (status === "completed") {
-      const allStepsCompleted = application.steps.every(
-        (step) => step.status === "completed"
+    if (status === "Approved") {
+      const allStepsApproved = application.steps.every(
+        (step) => step.status === "Approved"
       );
-      if (allStepsCompleted) {
-        application.status = "completed";
+      if (allStepsApproved) {
+        application.status = "Completed";
       }
     }
 
@@ -425,7 +448,7 @@ export const updateStepStatus = async (req, res) => {
     await logAction({
       type: "application",
       action: "step_status_updated",
-      performedBy: userId,
+      performedBy: req.user.id,
       targetUser: application.customer,
       details: {
         applicationId,
@@ -455,7 +478,9 @@ export const lockOrUnlockApplication = async (req, res) => {
       return res.status(400).json({ message: "`lock` must be true or false" });
     }
 
-    const application = await Application.findById(applicationId);
+    const application = await Application.findOne({
+      applicationId: applicationId,
+    });
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }

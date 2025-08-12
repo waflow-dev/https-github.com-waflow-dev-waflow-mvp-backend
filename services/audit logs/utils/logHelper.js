@@ -8,8 +8,9 @@ export const logAction = async ({
   details = {},
 }) => {
   try {
-    // Use local audit endpoint instead of external URL
-    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    // For server-to-server communication, use the same server
+    const baseUrl =
+      process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
     await axios.post(`${baseUrl}/api/audit/log`, {
       type,
       action,

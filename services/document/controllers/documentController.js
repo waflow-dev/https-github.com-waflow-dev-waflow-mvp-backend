@@ -115,10 +115,10 @@ export const createDocument = async (req, res) => {
         linkedTo: applicationId,
       });
       if (docCount === 1) {
-        const app = await Application.findById(applicationId);
-        if (app && app.status === "New") {
-          app.status = "Waiting for Agent Review";
-          await app.save();
+        const application = await Application.findById(applicationId);
+        if (application && application.status === "New") {
+          application.status = "Waiting for Agent Review";
+          await application.save();
         }
       }
     }

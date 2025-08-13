@@ -530,7 +530,7 @@ export const addNote = async (req, res) => {
 
     application.notes.push({
       message,
-      addedBy: user?.userId,
+      addedBy: user?.id,
       addedByRole: user?.role,
       timestamp: new Date(),
     });

@@ -439,6 +439,7 @@ export const updateStepStatus = async (req, res) => {
       );
       if (allStepsApproved) {
         application.status = "Completed";
+        application.isLocked = true;
       }
     }
 

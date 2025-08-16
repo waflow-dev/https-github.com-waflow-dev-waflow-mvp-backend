@@ -585,7 +585,7 @@ export const addNote = async (req, res) => {
 ////////////////////////////////////////////Get request API's////////////////////////////////////////////////////////
 
 export const getApplicationById = async (req, res) => {
-  const { applicationId } = req.params;
+  const { appId } = req.params;
 
   const user = req.user;
 
@@ -593,7 +593,7 @@ export const getApplicationById = async (req, res) => {
 
   try {
     const application = await Application.findOne({
-      _id: applicationId,
+      appId: appId,
     }).populate("customer");
 
     if (!application) {
@@ -601,24 +601,24 @@ export const getApplicationById = async (req, res) => {
     }
 
     // Manually populate assignedAgent based on assignedAgentRole
-    if (application.assignedAgent && application.assignedAgentRole) {
-      try {
-        if (application.assignedAgentRole === "agent") {
-          const agent = await Agent.findById(application.assignedAgent).select(
-            "fullName email"
-          );
-          application.assignedAgent = agent;
-        } else if (application.assignedAgentRole === "admin") {
-          const admin = await Admin.findById(application.assignedAgent).select(
-            "fullName email"
-          );
-          application.assignedAgent = admin;
-        }
-      } catch (error) {
-        console.error("Error populating assignedAgent:", error);
-        application.assignedAgent = null;
-      }
-    }
+    // if (application.assignedAgent && application.assignedAgentRole) {
+    //   try {
+    //     if (application.assignedAgentRole === "agent") {
+    //       const agent = await Agent.findById(application.assignedAgent).select(
+    //         "fullName email"
+    //       );
+    //       application.assignedAgent = agent;
+    //     } else if (application.assignedAgentRole === "admin") {
+    //       const admin = await Admin.findById(application.assignedAgent).select(
+    //         "fullName email"
+    //       );
+    //       application.assignedAgent = admin;
+    //     }
+    //   } catch (error) {
+    //     console.error("Error populating assignedAgent:", error);
+    //     application.assignedAgent = null;
+    //   }
+    // }
 
     // Manually populate notes.addedBy based on addedByRole
     if (application.notes && application.notes.length > 0) {

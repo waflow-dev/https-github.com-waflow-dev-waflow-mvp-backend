@@ -71,7 +71,7 @@ router.post(
 );
 
 router.get(
-  "/:applicationId",
+  "/:appId",
   authenticateToken,
   authorizeRoles("agent", "customer", "admin"),
   getApplicationById

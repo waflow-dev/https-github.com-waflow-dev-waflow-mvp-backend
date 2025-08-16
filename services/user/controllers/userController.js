@@ -57,12 +57,29 @@ export const createCustomer = async (req, res) => {
       email,
       passwordHash,
       role: "customer",
+      isTempPassword: true,
     });
 
+    const agentAuth = await Auth.findOne({
+      userId: assignedAgentId,
+      role: "agent",
+    });
+
+    // send welcome email to customer
     await sendEmail(
       email,
-      "Account created",
-      `Your account has been successfully created, please login.`
+      "Welcome to Waflow - Set up your account",
+      `Your profile has been created. Click the link and login using the credentials provided, to set your password and access your application dashboard.
+      https://waflow-frontend.vercel.app/auth
+      Email : ${email}
+      Password : ${password}`
+    );
+
+    // send notification email to agent
+    await sendEmail(
+      agentAuth.email,
+      `New Customer Assigned: ${firstName} ${middleName} ${lastName}`,
+      `You've been assigned to a new customer. Log in to begin onboarding them.`
     );
 
     await logAction({
@@ -119,12 +136,16 @@ export const createAgent = async (req, res) => {
       email,
       passwordHash,
       role: "agent",
+      isTempPassword: true,
     });
 
     await sendEmail(
       email,
-      "Account created",
-      `Your account has been successfully created, please login.`
+      "You're Invited to Waflow - Set Up Your Agent Account",
+      `Your profile has been created. Click the link and login using the credentials provided, to set your password and access your dashboard.
+      https://waflow-frontend.vercel.app/auth
+      Email : ${email}
+      Password : ${password}`
     );
 
     await logAction({
@@ -168,12 +189,16 @@ export const createAdmin = async (req, res) => {
       email,
       passwordHash,
       role: "admin",
+      isTempPassword: true,
     });
 
     await sendEmail(
       email,
-      "Account created",
-      `Your account has been successfully created, please login.`
+      "You're Invited to Manage Waflow - Activate Your Account",
+      `Your profile has been created. Click the link and login using the credentials provided, to set your password and access your dashboard.
+      https://waflow-frontend.vercel.app/auth
+      Email : ${email}
+      Password : ${password}`
     );
 
     await logAction({

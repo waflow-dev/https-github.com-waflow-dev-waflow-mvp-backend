@@ -18,6 +18,7 @@ const allowedOrigins = [
   "http://localhost:5173",
   "http://localhost:8080",
   "https://app.waflow.ae",
+  "https://waflow-frontend-two.vercel.app",
 ];
 
 const corsHeaders = (req, res, next) => {

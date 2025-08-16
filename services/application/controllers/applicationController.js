@@ -7,11 +7,12 @@ import { logAction } from "../../audit logs/utils/logHelper.js";
 import { createNotification } from "../../notification/controllers/notificationController.js";
 import workflowConfig from "../utils/workflowConfig.js";
 import Document from "../../document/models/documentVaultModel.js";
+import sendEmail from "../../notification/utils/sendEmail.js";
 import jwt from "jsonwebtoken";
 
 ////////////////////////////////////////Helper Function////////////////////////////////////////////////////////////////
 
-// ✅ Helper to determine app status
+//  Helper to determine app status
 const calculateApplicationStatus = (steps) => {
   const total = steps.length;
   const approved = steps.filter((s) => s.status === "Approved").length;
@@ -33,7 +34,6 @@ export const createApplication = async (req, res) => {
   const {
     customerId,
     assignedAgent,
-    assignedAgentRole,
     applicationType,
     emirate,
     legalForm,
@@ -50,13 +50,6 @@ export const createApplication = async (req, res) => {
     if (!customer) {
       return res.status(404).json({ message: "Customer not found" });
     }
-
-    // const existing = await Application.findOne({ customer: customer._id });
-    // if (existing) {
-    //   return res
-    //     .status(400)
-    //     .json({ message: "Application already exists for this customer." });
-    // }
 
     const stepsFromConfig = workflowConfig[applicationType?.toLowerCase()];
 
@@ -80,7 +73,6 @@ export const createApplication = async (req, res) => {
       applicationId,
       customer: customerId,
       assignedAgent,
-      assignedAgentRole,
       applicationType,
       emirate,
       legalForm,
@@ -148,14 +140,14 @@ export const updateOnboardingDetails = async (req, res) => {
       return res.status(404).json({ message: "Application not found" });
     }
 
-    // ❌ Prevent update if locked
+    //  Prevent update if locked
     if (application.isLocked) {
       return res.status(403).json({
         message: "Application is locked and cannot be edited by the customer",
       });
     }
 
-    // ⚙️ Update only the customer-editable fields
+    //  Update only the customer-editable fields
     if (businessActivities) application.businessActivities = businessActivities;
     if (numberOfShareholders !== undefined)
       application.numberOfShareholders = numberOfShareholders;
@@ -166,19 +158,30 @@ export const updateOnboardingDetails = async (req, res) => {
     if (sponsorDetails) application.sponsorDetails = sponsorDetails;
     if (shareholderDetails) application.shareholderDetails = shareholderDetails;
 
-    // 🧠 Update status & save
+    //  Update status & save
     application.status = "Waiting for Agent Review";
     await application.save();
 
     const customerAuth = await Auth.findOne({
       userId: application.customer,
       role: "customer",
-    }).select("_id");
+    });
 
-    // 🛎️ Notify agent/admin
+    const agentAuth = await Auth.findOne({
+      userId: application.assignedAgent,
+      role: "agent",
+    });
+
+    await sendEmail(
+      agentAuth.email,
+      `New Application Submitted by ${customerAuth.email}`,
+      `A new application has been submitted. Please review and begin processing.`
+    );
+
+    //  Notify agent
     await createNotification({
       userId: application.assignedAgent,
-      userRole: application.assignedAgentRole,
+      userRole: "agent",
       title: "Onboarding Submitted",
       message: `${customerAuth.firstName} has submitted their onboarding form.`,
       type: "application",
@@ -186,7 +189,7 @@ export const updateOnboardingDetails = async (req, res) => {
       referenceType: "Application",
     });
 
-    // 📓 Log action
+    //  Log action
     await logAction({
       type: "application",
       action: "onboarding_submitted",
@@ -245,7 +248,6 @@ export const updateApplication = async (req, res) => {
       "paymentEntries", // Repeatable group
       "status",
       "assignedAgent",
-      "assignedAgentRole",
     ];
 
     for (let key of allowedFields) {
@@ -259,7 +261,7 @@ export const updateApplication = async (req, res) => {
     const customerAuth = await Auth.findOne({
       userId: application.customer,
       role: "customer",
-    }).select("_id");
+    });
 
     // 3. Log action
     await logAction({
@@ -301,87 +303,87 @@ export const updateApplication = async (req, res) => {
 
 //////////////////////////////////////////////Update Steps of workflow//////////////////////////////////////////////////////
 
-// API to approve the onboarding details provided by customer
-export const reviewApplicationAfterOnboarding = async (req, res) => {
-  const { applicationId } = req.params;
-  const { decision, note } = req.body; // decision = "approve" or "clarify"
+// // API to approve the onboarding details provided by customer
+// export const reviewApplicationAfterOnboarding = async (req, res) => {
+//   const { applicationId } = req.params;
+//   const { decision, note } = req.body; // decision = "approve" or "clarify"
 
-  try {
-    // Validate input
-    if (!["approve", "clarify"].includes(decision)) {
-      return res.status(400).json({ message: "Invalid decision type" });
-    }
+//   try {
+//     // Validate input
+//     if (!["approve", "clarify"].includes(decision)) {
+//       return res.status(400).json({ message: "Invalid decision type" });
+//     }
 
-    // 1. Fetch application
-    const application = await Application.findOne({
-      applicationId: applicationId,
-    });
-    if (!application) {
-      return res.status(404).json({ message: "Application not found" });
-    }
+//     // 1. Fetch application
+//     const application = await Application.findOne({
+//       applicationId: applicationId,
+//     });
+//     if (!application) {
+//       return res.status(404).json({ message: "Application not found" });
+//     }
 
-    // 2. Determine and set new status
-    application.status =
-      decision === "approve"
-        ? "Ready for Processing"
-        : "Awaiting Client Response";
+//     // 2. Determine and set new status
+//     application.status =
+//       decision === "approve"
+//         ? "Ready for Processing"
+//         : "Awaiting Client Response";
 
-    // 3. Store shared note if applicable
-    if (decision === "clarify") {
-      application.sharedNote = note || "Agent requested clarification.";
-    }
+//     // 3. Store shared note if applicable
+//     if (decision === "clarify") {
+//       application.sharedNote = note || "Agent requested clarification.";
+//     }
 
-    await application.save();
+//     await application.save();
 
-    // 4. Log action
-    await logAction({
-      type: "application",
-      action: "application_reviewed",
-      performedBy: req.user.id,
-      targetUser: application.customer,
-      details: {
-        applicationId,
-        newStatus: application.status,
-        note: decision === "clarify" ? note : undefined,
-      },
-    });
+//     // 4. Log action
+//     await logAction({
+//       type: "application",
+//       action: "application_reviewed",
+//       performedBy: req.user.id,
+//       targetUser: application.customer,
+//       details: {
+//         applicationId,
+//         newStatus: application.status,
+//         note: decision === "clarify" ? note : undefined,
+//       },
+//     });
 
-    // 5. Notify customer
-    await createNotification({
-      userId: application.customer,
-      userRole: "customer",
-      title:
-        decision === "approve"
-          ? "Application Approved"
-          : "Clarification Requested",
-      message:
-        decision === "approve"
-          ? `Your application (${application.applicationId}) has been approved.`
-          : `Your application (${application.applicationId}) requires clarification.`,
-      type: "ApplicationUpdate",
-      referenceId: application._id,
-      referenceType: "Application",
-    });
+//     // 5. Notify customer
+//     await createNotification({
+//       userId: application.customer,
+//       userRole: "customer",
+//       title:
+//         decision === "approve"
+//           ? "Application Approved"
+//           : "Clarification Requested",
+//       message:
+//         decision === "approve"
+//           ? `Your application (${application.applicationId}) has been approved.`
+//           : `Your application (${application.applicationId}) requires clarification.`,
+//       type: "ApplicationUpdate",
+//       referenceId: application._id,
+//       referenceType: "Application",
+//     });
 
-    res.status(200).json({
-      success: true,
-      message:
-        decision === "approve"
-          ? "Application marked as Ready for Processing"
-          : "Clarification requested from customer",
-      applicationStatus: application.status,
-    });
-  } catch (err) {
-    console.error("Review error:", err);
-    res.status(500).json({
-      success: false,
-      message: "Error reviewing application",
-      error: err.message,
-    });
-  }
-};
+//     res.status(200).json({
+//       success: true,
+//       message:
+//         decision === "approve"
+//           ? "Application marked as Ready for Processing"
+//           : "Clarification requested from customer",
+//       applicationStatus: application.status,
+//     });
+//   } catch (err) {
+//     console.error("Review error:", err);
+//     res.status(500).json({
+//       success: false,
+//       message: "Error reviewing application",
+//       error: err.message,
+//     });
+//   }
+// };
 
-// PATCH: Update Step Status by customerId
+// PATCH: Update Step Status by applicationId
 export const updateStepStatus = async (req, res) => {
   const { applicationId } = req.params;
   const { stepName, status } = req.body;
@@ -396,7 +398,7 @@ export const updateStepStatus = async (req, res) => {
 
   try {
     const application = await Application.findOne({
-      applicationId: applicationId,
+      _id: applicationId,
     });
 
     console.log("🔍 Application search result:", {
@@ -444,6 +446,17 @@ export const updateStepStatus = async (req, res) => {
     }
 
     await application.save();
+
+    const customerAuth = await Auth.findOne({
+      userId: application.customer,
+      role: "customer",
+    });
+
+    await sendEmail(
+      customerAuth.email,
+      `Update on Your Application Step: ${stepName}`,
+      `The status of “${stepName}” has been updated to ${status}.`
+    );
 
     // Log the action
     await logAction({
@@ -519,12 +532,17 @@ export const lockOrUnlockApplication = async (req, res) => {
 //////////////////////////////////////////Add application notes/////////////////////////////////////////////////////////
 
 export const addNote = async (req, res) => {
-  const { customerId } = req.params;
+  const { applicationId } = req.params;
   const { message } = req.body;
   const user = req.user;
 
   try {
-    const application = await Application.findOne({ customer: customerId });
+    const application = await Application.findOne({ _id: applicationId })
+      .populate("customer")
+      .populate("assignedAgent");
+
+    console.log(application);
+
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
@@ -537,6 +555,20 @@ export const addNote = async (req, res) => {
     });
 
     await application.save();
+
+    if (user.role == "customer") {
+      await sendEmail(
+        application.assignedAgent.email,
+        `${application.customer.firstName} Left a Note on Their Application`,
+        `${application.customer.firstName} has added a comment to their application. Log in to respond.`
+      );
+    } else if (user.role == "agent") {
+      await sendEmail(
+        application.customer.email,
+        `Your Agent Left a Note on Your Application`,
+        `Your agent or manager added a note on your application. Please log in to review it.`
+      );
+    }
 
     res.status(200).json({
       message: "Note added successfully",
@@ -553,7 +585,7 @@ export const addNote = async (req, res) => {
 ////////////////////////////////////////////Get request API's////////////////////////////////////////////////////////
 
 export const getApplicationById = async (req, res) => {
-  const { appId } = req.params;
+  const { applicationId } = req.params;
 
   const user = req.user;
 
@@ -561,7 +593,7 @@ export const getApplicationById = async (req, res) => {
 
   try {
     const application = await Application.findOne({
-      applicationId: appId,
+      _id: applicationId,
     }).populate("customer");
 
     if (!application) {

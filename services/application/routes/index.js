@@ -10,7 +10,7 @@ import {
   getAllApplications,
   showApplicationWithStatus,
   getApplicationByCustomerId,
-  reviewApplicationAfterOnboarding,
+  // reviewApplicationAfterOnboarding,
   updateApplication,
   lockOrUnlockApplication,
 } from "../controllers/applicationController.js";
@@ -40,12 +40,12 @@ router.patch(
   updateApplication
 );
 
-router.patch(
-  "/review-after-onboarding/:applicationId",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  reviewApplicationAfterOnboarding
-);
+// router.patch(
+//   "/review-after-onboarding/:applicationId",
+//   authenticateToken,
+//   authorizeRoles("agent", "admin"),
+//   reviewApplicationAfterOnboarding
+// );
 
 // Update application step status — agent/admin
 router.patch(
@@ -64,14 +64,14 @@ router.patch(
 
 // Add note for clarification
 router.post(
-  "/note/:customerId",
+  "/note/:applicationId",
   authenticateToken,
   authorizeRoles("agent", "customer", "admin"),
   addNote
 );
 
 router.get(
-  "/:appId",
+  "/:applicationId",
   authenticateToken,
   authorizeRoles("agent", "customer", "admin"),
   getApplicationById

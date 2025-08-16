@@ -22,6 +22,16 @@ export const loginUser = async (req, res) => {
     const isMatch = await bcrypt.compare(password, userAuth.passwordHash);
     if (!isMatch) return res.status(401).json({ message: "Invalid password" });
 
+    //  If temp password, force reset
+    if (userAuth.isTempPassword) {
+      const token = generateResetToken(userAuth.userId); // same utility as forgot password
+      return res.status(403).json({
+        message: "Password reset required",
+        redirectTo: `/reset-password/${token}`, // frontend uses this
+        resetToken: token, // optionally give raw token if frontend handles routing
+      });
+    }
+
     const token = jwt.sign(
       {
         id: userAuth.userId,
@@ -115,8 +125,9 @@ export const forgotPassword = async (req, res) => {
 
     await sendEmail(
       email,
-      "Reset Your Password",
-      `Click the link: ${resetUrl}`
+      "Reset Your Waflow Password",
+      `Secure link to reset password: ${resetUrl} 
+      Ignore if not requested.`
     );
 
     await logAction({
@@ -149,6 +160,7 @@ export const resetPassword = async (req, res) => {
     if (!authUser) return res.status(404).json({ message: "User not found" });
 
     authUser.passwordHash = passwordHash;
+    authUser.isTempPassword = false;
     await authUser.save();
 
     await logAction({

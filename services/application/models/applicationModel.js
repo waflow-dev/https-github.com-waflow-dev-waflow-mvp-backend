@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-// 🪜 Step Schema (Retained)
+//  Step Schema (Retained)
 const stepSchema = new mongoose.Schema({
   stepName: { type: String, required: true },
   status: {
@@ -20,7 +20,7 @@ const stepSchema = new mongoose.Schema({
   updatedAt: { type: Date, default: Date.now },
 });
 
-// 📝 Notes schema (used by agents/managers)
+//  Notes schema (used by agents/managers)
 const noteSchema = new mongoose.Schema({
   message: String,
   addedBy: {
@@ -30,13 +30,13 @@ const noteSchema = new mongoose.Schema({
   },
   addedByRole: {
     type: String,
-    enum: ["agent", "admin"],
+    enum: ["customer", "agent", "admin"],
     required: true,
   },
   timestamp: { type: Date, default: Date.now },
 });
 
-// 📄 Payment Entry schema (repeatable group)
+// Payment Entry schema (repeatable group)
 const paymentEntrySchema = new mongoose.Schema({
   paymentMethod: String,
   amountPaid: Number,
@@ -47,7 +47,7 @@ const paymentEntrySchema = new mongoose.Schema({
   additionalNotes: String,
 });
 
-// 🌐 Nature of Control - Enum List
+//  Nature of Control - Enum List
 const natureOfControlEnum = [
   "Shareholder",
   "Voting Rights",
@@ -71,11 +71,7 @@ const applicationSchema = new mongoose.Schema(
 
     assignedAgent: {
       type: mongoose.Schema.Types.ObjectId,
-      refPath: "assignedAgentRole",
-    },
-    assignedAgentRole: {
-      type: String,
-      enum: ["admin", "agent"],
+      refPath: "Agent",
       required: true,
     },
 

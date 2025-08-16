@@ -27,6 +27,10 @@ const authSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    isTempPassword: {
+      type: Boolean,
+      default: true,
+    },
     createdAt: {
       type: Date,
       default: Date.now,

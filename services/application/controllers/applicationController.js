@@ -758,19 +758,12 @@ export const getAllApplications = async (req, res) => {
       applications.map(async (app) => {
         const appObj = app.toObject();
 
-        if (app.assignedAgent && app.assignedAgentRole) {
+        if (app.assignedAgent) {
           try {
-            if (app.assignedAgentRole === "agent") {
-              const agent = await Agent.findById(app.assignedAgent).select(
-                "fullName email"
-              );
-              appObj.assignedAgent = agent;
-            } else if (app.assignedAgentRole === "admin") {
-              const admin = await Admin.findById(app.assignedAgent).select(
-                "fullName email"
-              );
-              appObj.assignedAgent = admin;
-            }
+            const agent = await Agent.findById(app.assignedAgent).select(
+              "fullName email"
+            );
+            appObj.assignedAgent = agent;
           } catch (error) {
             console.error("Error populating assignedAgent:", error);
             appObj.assignedAgent = null;

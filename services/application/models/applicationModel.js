@@ -18,6 +18,16 @@ const stepSchema = new mongoose.Schema({
     default: "Not Started",
   },
   updatedAt: { type: Date, default: Date.now },
+  updatedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    required: false,
+    refPath: "addedByRole",
+  },
+  updatedByRole: {
+    type: String,
+    enum: ["customer", "agent", "admin"],
+    required: false,
+  },
 });
 
 //  Notes schema (used by agents/managers)

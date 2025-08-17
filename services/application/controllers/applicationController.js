@@ -394,6 +394,7 @@ export const updateApplication = async (req, res) => {
 export const updateStepStatus = async (req, res) => {
   const { applicationId } = req.params;
   const { stepName, status } = req.body;
+  const user = req.user;
 
   console.log("🔍 updateStepStatus called with:", {
     applicationId,
@@ -440,6 +441,8 @@ export const updateStepStatus = async (req, res) => {
     // Update step status
     stepToUpdate.status = status;
     stepToUpdate.updatedAt = new Date();
+    stepToUpdate.updatedBy = user.id;
+    stepToUpdate.updatedByRole = user.role;
 
     // Update application status based on step completion
     if (status === "Approved") {

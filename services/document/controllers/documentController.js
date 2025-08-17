@@ -28,33 +28,17 @@ const calculateApplicationStatus = (steps) => {
 
 export const createDocument = async (req, res) => {
   const user = req.user;
-  const file = req.file;
-
-  if (!file) {
-    return res.status(400).json({ message: "File is required (image or PDF)" });
-  }
 
   try {
-    const ext = file.originalname.split(".").pop().toLowerCase();
-    const cloudinaryResult = await uploadToCloudinaryFromBuffer(
-      file.buffer,
-      ext
-    );
-    // const cloudinaryResult = await uploadOnCloudinary(file.path);
-    const uploadedFileUrl =
-      cloudinaryResult?.secure_url || cloudinaryResult?.url;
-    if (!uploadedFileUrl)
-      return res.status(500).json({ message: "File upload failed" });
-
     const {
       documentName,
       documentType,
       relatedStepName,
+      linkedTo,
       linkedModel,
+      fileUrl,
       expiryDate,
       notes,
-      applicationId,
-      memberId,
     } = req.body;
 
     // Validate step name only for application-linked documents
@@ -67,32 +51,25 @@ export const createDocument = async (req, res) => {
 
     console.log(user);
 
-    // const authUser = await Auth.findById(user.userId);
-    // console.log("authUser", authUser);
-
-    // const linkedTo =
-    //   linkedModel === "Application" ? applicationId : user?.user.id;
-
-    let linkedTo;
-
-    if (linkedModel == "Application") {
-      linkedTo = applicationId;
-    }
-
-    console.log(user.id);
-
     const newDoc = await Document.create({
       documentName,
       documentType,
       ...(relatedStepName && { relatedStepName }),
       linkedTo,
       linkedModel,
-      fileUrl: uploadedFileUrl,
-      userId: user.id,
+      fileUrl,
+      uploadedBy: user.id,
+      uploadedByRole: user.role,
       expiryDate,
-      notes,
-      memberId,
+      notes: {
+        message: notes,
+        addedBy: user.id,
+        addedByRole: user.role,
+      },
     });
+
+    let applicationId;
+    if (linkedModel == "Application") applicationId = linkedTo;
 
     await logAction({
       type: "document",

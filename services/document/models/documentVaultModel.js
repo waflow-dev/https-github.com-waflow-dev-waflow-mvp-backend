@@ -31,28 +31,32 @@ const documentVaultSchema = new mongoose.Schema(
 
     fileUrl: { type: String, required: true },
 
-    userId: {
+    uploadedBy: {
       type: mongoose.Schema.Types.ObjectId,
       required: true,
-      ref: "Auth",
+      refPath: "uploadedByRole",
     },
-
-    memberId: { type: String },
-
-    status: {
+    uploadedByRole: {
       type: String,
-      enum: ["Pending", "Approved", "Rejected"],
-      default: "Pending",
+      enum: ["agent", "admin", "customer"],
+      required: true,
     },
-    // notes: { type: String },
 
-    uploadedBy: String,
     expiryDate: Date,
+
     notes: [
       {
         message: String,
-        addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Auth" },
-        addedByRole: { type: String, enum: ["agent", "admin", "customer"] },
+        addedBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          refPath: "addedByRole",
+          required: true,
+        },
+        addedByRole: {
+          type: String,
+          enum: ["agent", "admin", "customer"],
+          required: true,
+        },
         timestamp: { type: Date, default: Date.now },
       },
     ],

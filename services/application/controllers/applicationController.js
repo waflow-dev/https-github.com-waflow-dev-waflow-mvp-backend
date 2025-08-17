@@ -707,7 +707,7 @@ export const getApplicationsByCustomerId = async (req, res) => {
     res.status(200).json({
       customer,
       applications,
-      Total: application.length,
+      Total: applications.length,
     });
   } catch (error) {
     console.error("Error in getApplicationsByCustomerId:", error);

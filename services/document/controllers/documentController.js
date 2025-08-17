@@ -241,30 +241,56 @@ export const getCustomerDocuments = async (req, res) => {
   }
 };
 
-// ✅ Retain: getApplicationDocuments
+// ✅ Updated: getApplicationDocuments
 export const getApplicationDocuments = async (req, res) => {
   const { appId } = req.params;
   const { status, documentType } = req.query;
 
   try {
-    const filter = {
+    // 🔹 First get the application to know its linked customer
+    const application = await Application.findById(appId).select("customer");
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: "Application not found",
+      });
+    }
+
+    const filterApp = {
       linkedTo: appId,
       linkedModel: "Application",
     };
 
-    if (status) filter.status = status;
-    if (documentType) filter.documentType = documentType;
+    const filterCustomer = {
+      linkedTo: application.customer,
+      linkedModel: "Customer",
+    };
 
-    const docs = await Document.find(filter).sort({ createdAt: -1 });
+    if (status) {
+      filterApp.status = status;
+      filterCustomer.status = status;
+    }
+
+    if (documentType) {
+      filterApp.documentType = documentType;
+      filterCustomer.documentType = documentType;
+    }
+
+    // 🔹 Fetch both application and customer docs
+    const [applicationDocs, customerDocs] = await Promise.all([
+      Document.find(filterApp).sort({ createdAt: -1 }),
+      Document.find(filterCustomer).sort({ createdAt: -1 }),
+    ]);
 
     res.status(200).json({
       success: true,
-      data: docs,
+      applicationDocs,
+      customerDocs,
     });
   } catch (err) {
     res.status(500).json({
       success: false,
-      message: "Error fetching application documents",
+      message: "Error fetching application & customer documents",
       error: err.message,
     });
   }

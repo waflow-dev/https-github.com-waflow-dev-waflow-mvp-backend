@@ -9,6 +9,7 @@ import workflowConfig from "../utils/workflowConfig.js";
 import Document from "../../document/models/documentVaultModel.js";
 import sendEmail from "../../notification/utils/sendEmail.js";
 import jwt from "jsonwebtoken";
+import { application } from "express";
 
 ////////////////////////////////////////Helper Function////////////////////////////////////////////////////////////////
 
@@ -706,6 +707,7 @@ export const getApplicationsByCustomerId = async (req, res) => {
     res.status(200).json({
       customer,
       applications,
+      Total: application.length,
     });
   } catch (error) {
     console.error("Error in getApplicationsByCustomerId:", error);

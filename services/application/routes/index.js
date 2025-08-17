@@ -8,11 +8,11 @@ import {
   updateOnboardingDetails,
   getApplicationById,
   getAllApplications,
-  showApplicationWithStatus,
-  getApplicationByCustomerId,
+  getApplicationsByCustomerId,
   // reviewApplicationAfterOnboarding,
   updateApplication,
   lockOrUnlockApplication,
+  showApplicationWithDoucuments,
 } from "../controllers/applicationController.js";
 
 const router = express.Router();
@@ -81,7 +81,7 @@ router.get(
   "/app/:customerId",
   authenticateToken,
   authorizeRoles("agent", "customer", "admin"),
-  getApplicationByCustomerId
+  getApplicationsByCustomerId
 );
 
 // Get all applications — allowed for agent/admin
@@ -93,10 +93,10 @@ router.get(
 );
 
 router.get(
-  "/status/:customerId",
+  "/status/:appId",
   authenticateToken,
   authorizeRoles("agent", "customer", "admin"),
-  showApplicationWithStatus
+  showApplicationWithDoucuments
 );
 
 export default router;

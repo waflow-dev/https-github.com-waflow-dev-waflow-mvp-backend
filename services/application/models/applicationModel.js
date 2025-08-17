@@ -71,7 +71,7 @@ const applicationSchema = new mongoose.Schema(
 
     assignedAgent: {
       type: mongoose.Schema.Types.ObjectId,
-      refPath: "Agent",
+      ref: "Agent",
       required: true,
     },
 
@@ -89,7 +89,7 @@ const applicationSchema = new mongoose.Schema(
       default: "New",
     },
 
-    // 📌 Agent/Manager-filled fields
+    // Agent/Manager-filled fields
     applicationType: {
       type: String,
       enum: ["Mainland", "Freezone", "Offshore"],
@@ -117,7 +117,7 @@ const applicationSchema = new mongoose.Schema(
         "Freezone Company",
       ],
     },
-    proposedCompanyNamesEN: [{ type: String, required: true }], // multiple entries
+    proposedCompanyNamesEN: { type: String, required: true },
     proposedCompanyNameAR: { type: String },
     officeRequired: { type: Boolean },
     officeType: {

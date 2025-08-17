@@ -41,6 +41,7 @@ export const createApplication = async (req, res) => {
     proposedCompanyNameAR,
     officeRequired,
     officeType,
+    additionalNotes,
     totalAgreedCost,
     paymentEntries = [],
   } = req.body;
@@ -80,6 +81,11 @@ export const createApplication = async (req, res) => {
       proposedCompanyNameAR,
       officeRequired,
       officeType,
+      notes: {
+        message: additionalNotes,
+        addedBy: req.user.id,
+        addedByRole: req.user.role,
+      },
       totalAgreedCost,
       paymentEntries,
       steps,
@@ -593,32 +599,14 @@ export const getApplicationById = async (req, res) => {
 
   try {
     const application = await Application.findOne({
-      appId: appId,
-    }).populate("customer");
+      applicationId: appId,
+    })
+      .populate("customer")
+      .populate("assignedAgent");
 
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
-
-    // Manually populate assignedAgent based on assignedAgentRole
-    // if (application.assignedAgent && application.assignedAgentRole) {
-    //   try {
-    //     if (application.assignedAgentRole === "agent") {
-    //       const agent = await Agent.findById(application.assignedAgent).select(
-    //         "fullName email"
-    //       );
-    //       application.assignedAgent = agent;
-    //     } else if (application.assignedAgentRole === "admin") {
-    //       const admin = await Admin.findById(application.assignedAgent).select(
-    //         "fullName email"
-    //       );
-    //       application.assignedAgent = admin;
-    //     }
-    //   } catch (error) {
-    //     console.error("Error populating assignedAgent:", error);
-    //     application.assignedAgent = null;
-    //   }
-    // }
 
     // Manually populate notes.addedBy based on addedByRole
     if (application.notes && application.notes.length > 0) {
@@ -635,6 +623,11 @@ export const getApplicationById = async (req, res) => {
                 "fullName email"
               );
               note.addedBy = admin;
+            } else if (note.addedByRole === "customer") {
+              const customer = await Customer.findById(note.addedBy).select(
+                "fullName email"
+              );
+              note.addedBy = customer;
             }
           } catch (error) {
             console.error("Error populating note.addedBy:", error);
@@ -657,80 +650,66 @@ export const getApplicationById = async (req, res) => {
   }
 };
 
-export const getApplicationByCustomerId = async (req, res) => {
-  const { customerId } = req.params;
-
-  const user = req.user;
-
-  console.log("Fetching application for user:", user);
-  console.log("Fetching application for customerId:", customerId);
-
+export const getApplicationsByCustomerId = async (req, res) => {
   try {
-    const application = await Application.findOne({
-      customer: customerId,
-    }).populate("customer");
+    const { customerId } = req.params;
 
-    console.log("Application found:", application ? "Yes" : "No");
-
-    if (!application) {
-      return res.status(200).json({ message: "Application not created yet" });
+    //  Validate customer exists
+    const customer = await Customer.findById(customerId);
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
     }
 
-    // Manually populate assignedAgent based on assignedAgentRole
-    if (application.assignedAgent && application.assignedAgentRole) {
-      try {
-        if (application.assignedAgentRole === "agent") {
-          const agent = await Agent.findById(application.assignedAgent).select(
-            "fullName email"
-          );
-          application.assignedAgent = agent;
-        } else if (application.assignedAgentRole === "admin") {
-          const admin = await Admin.findById(application.assignedAgent).select(
-            "fullName email"
-          );
-          application.assignedAgent = admin;
-        }
-      } catch (error) {
-        console.error("Error populating assignedAgent:", error);
-        application.assignedAgent = null;
-      }
+    //  Find all applications linked to this customer
+    const applications = await Application.find({ customer: customerId })
+      .populate("customer") // populate customer details
+      .populate("assignedAgent"); // populate assigned agent details
+
+    if (!applications || applications.length === 0) {
+      return res
+        .status(404)
+        .json({ message: "No applications found for this customer" });
     }
 
     // Manually populate notes.addedBy based on addedByRole
-    if (application.notes && application.notes.length > 0) {
-      for (let note of application.notes) {
-        if (note.addedBy && note.addedByRole) {
-          try {
-            if (note.addedByRole === "agent") {
-              const agent = await Agent.findById(note.addedBy).select(
-                "fullName email"
-              );
-              note.addedBy = agent;
-            } else if (note.addedByRole === "admin") {
-              const admin = await Admin.findById(note.addedBy).select(
-                "fullName email"
-              );
-              note.addedBy = admin;
+    for (let application of applications) {
+      if (application.notes && application.notes.length > 0) {
+        for (let note of application.notes) {
+          if (note.addedBy && note.addedByRole) {
+            try {
+              if (note.addedByRole === "agent") {
+                const agent = await Agent.findById(note.addedBy).select(
+                  "fullName email"
+                );
+                note.addedBy = agent;
+              } else if (note.addedByRole === "admin") {
+                const admin = await Admin.findById(note.addedBy).select(
+                  "fullName email"
+                );
+                note.addedBy = admin;
+              } else if (note.addedByRole === "customer") {
+                const customer = await Customer.findById(note.addedBy).select(
+                  "fullName email"
+                );
+                note.addedBy = customer;
+              }
+            } catch (error) {
+              console.error("Error populating note.addedBy:", error);
+              note.addedBy = null;
             }
-          } catch (error) {
-            console.error("Error populating note.addedBy:", error);
-            note.addedBy = null;
           }
         }
       }
     }
 
+    //  Send back both customer info & applications
     res.status(200).json({
-      success: true,
-      data: application,
+      customer,
+      applications,
     });
-  } catch (err) {
-    console.error("Error in getApplicationByCustomerId:", err);
-    res.status(500).json({
-      success: false,
-      message: "Error fetching application",
-      error: err.message,
-    });
+  } catch (error) {
+    console.error("Error in getApplicationsByCustomerId:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
   }
 };
 
@@ -788,26 +767,28 @@ export const getAllApplications = async (req, res) => {
   }
 };
 
-export const showApplicationWithStatus = async (req, res) => {
-  const { customerId } = req.params;
+export const showApplicationWithDoucuments = async (req, res) => {
+  const { appId } = req.params;
 
   try {
-    const customer = await Customer.findById(customerId).lean();
-    if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
-    }
-
     const application = await Application.findOne({
-      customer: customerId,
+      applicationId: appId,
     }).lean();
     if (!application) {
       return res.status(404).json({ message: "Application not found" });
     }
 
+    const customerId = application.customer;
+
+    const customer = await Customer.findById(customerId).lean();
+    if (!customer) {
+      return res.status(404).json({ message: "Customer not found" });
+    }
+
     // Get all documents uploaded by this customer
     const documents = await Document.find({
-      linkedTo: customerId,
-      linkedModel: "Customer",
+      linkedTo: application._id,
+      linkedModel: "Application",
     }).lean();
 
     // Attach documents to their related steps

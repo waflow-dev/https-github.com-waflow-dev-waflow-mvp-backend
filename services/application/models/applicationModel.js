@@ -1,48 +1,55 @@
 import mongoose from "mongoose";
 
-const stepSchema = new mongoose.Schema({
-  stepName: String,
-  status: {
-    type: String,
-    enum: [
-      "Not Started",
-      "Started",
-      "Submitted for Review",
-      "Awaiting Response",
-      "Approved",
-      "Declined",
-      "Skipped",
-    ],
-    default: "Not Started",
+const stepSchema = new mongoose.Schema(
+  {
+    stepName: String,
+    status: {
+      type: String,
+      enum: [
+        "Not Started",
+        "Started",
+        "Submitted for Review",
+        "Awaiting Response",
+        "Approved",
+        "Declined",
+        "Skipped",
+      ],
+      default: "Not Started",
+    },
   },
-  updatedAt: { type: Date, default: Date.now },
-});
+  { timestamps: true } // add createdAt + updatedAt per step
+);
 
-const visaSubStepSchema = new mongoose.Schema({
-  memberId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
-  medical: {
-    type: stepSchema,
-    default: () => ({ stepName: "Medical & Biometric" }),
+const visaSubStepSchema = new mongoose.Schema(
+  {
+    memberId: { type: mongoose.Schema.Types.ObjectId, ref: "Customer" },
+    medical: {
+      type: stepSchema,
+      default: () => ({ stepName: "Medical & Biometric" }),
+    },
+    residenceVisa: {
+      type: stepSchema,
+      default: () => ({ stepName: "Residence Visa" }),
+    },
+    emiratesIdSoft: {
+      type: stepSchema,
+      default: () => ({ stepName: "Emirates ID (Soft Copy)" }),
+    },
+    emiratesIdHard: {
+      type: stepSchema,
+      default: () => ({ stepName: "Emirates ID (Hard Copy)" }),
+    },
   },
-  residenceVisa: {
-    type: stepSchema,
-    default: () => ({ stepName: "Residence Visa" }),
-  },
-  emiratesIdSoft: {
-    type: stepSchema,
-    default: () => ({ stepName: "Emirates ID (Soft Copy)" }),
-  },
-  emiratesIdHard: {
-    type: stepSchema,
-    default: () => ({ stepName: "Emirates ID (Hard Copy)" }),
-  },
-});
+  { timestamps: true }
+);
 
-const noteSchema = new mongoose.Schema({
-  message: String,
-  addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
-  timestamp: { type: Date, default: Date.now },
-});
+const noteSchema = new mongoose.Schema(
+  {
+    message: String,
+    addedBy: { type: mongoose.Schema.Types.ObjectId, ref: "Agent" },
+  },
+  { timestamps: true }
+);
 
 const applicationSchema = new mongoose.Schema(
   {
@@ -62,12 +69,12 @@ const applicationSchema = new mongoose.Schema(
     },
     steps: [stepSchema],
     sharedNote: { type: String },
-    visaSubSteps: [visaSubStepSchema],
+    visaSubSteps: [visaSubStepSchema], // change to single if only one set
     notes: [noteSchema],
     isLocked: { type: Boolean, default: false },
-    createdAt: { type: Date, default: Date.now },
   },
   { timestamps: true }
 );
 
 export default mongoose.model("Application", applicationSchema);
+

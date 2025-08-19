@@ -293,9 +293,24 @@ export const getAdminDetails = async (req, res) => {
 
 export const getAllCustomers = async (req, res) => {
   try {
-    const customers = await Customer.find({}).lean();
-    console.log("All customers in database:", customers.length);
-    console.log("Customers:", customers);
+    let customers;
+
+    if (req.user.role === "admin") {
+      // ✅ Admin sees all customers
+      customers = await Customer.find({}).lean();
+    } else if (req.user.role === "agent") {
+      // ✅ Agent sees only their customers
+      customers = await Customer.find({
+        assignedAgentId: req.user.id,
+      }).lean();
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to view customers",
+      });
+    }
+
+    console.log("Customers fetched:", customers.length);
 
     res.status(200).json({
       success: true,

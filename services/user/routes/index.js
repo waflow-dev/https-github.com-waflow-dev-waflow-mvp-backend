@@ -50,7 +50,12 @@ router.get(
   getAdminDetails
 );
 
-router.get("/customers", authenticateToken, getAllCustomers);
+router.get(
+  "/customers",
+  authenticateToken,
+  authorizeRoles("admin", "agent"),
+  getAllCustomers
+);
 
 router.get("/agents", authenticateToken, authorizeRoles("admin"), getAllAgents);
 

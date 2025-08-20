@@ -71,10 +71,23 @@ export const createApplication = async (req, res) => {
     const paddedNumber = String(appCount + 1).padStart(4, "0");
     const applicationId = `APP-${paddedNumber}`;
 
+    // Decide assignedAgent depending on role
+    let finalAssignedAgent;
+    if (req.user.role === "admin") {
+      finalAssignedAgent = assignedAgent || req.user.id; // Admin creating → use provided or fallback to self
+    } else if (req.user.role === "agent") {
+      finalAssignedAgent = req.user.id; // Agent creating → auto-assign themselves
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to create applications",
+      });
+    }
+
     const newApplication = await Application.create({
       applicationId,
       customer: customerId,
-      assignedAgent,
+      assignedAgent: finalAssignedAgent,
       applicationType,
       emirate,
       legalForm,

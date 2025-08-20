@@ -36,8 +36,21 @@ export const createCustomer = async (req, res) => {
     const customerId = await generateCustomId(Customer, "CX", "customerId");
     console.log(assignedAgentId);
 
+    // Decide assignedAgent depending on role
+    let finalAssignedAgent;
+    if (req.user.role === "admin") {
+      finalAssignedAgent = assignedAgentId || req.user.id; // Admin creating → use provided or fallback to self
+    } else if (req.user.role === "agent") {
+      finalAssignedAgent = req.user.id; // Agent creating → auto-assign themselves
+    } else {
+      return res.status(403).json({
+        success: false,
+        message: "Unauthorized to create applications",
+      });
+    }
+
     const customer = await Customer.create({
-      assignedAgentId: assignedAgentId,
+      assignedAgentId: finalAssignedAgent,
       firstName,
       middleName,
       lastName,
@@ -61,7 +74,7 @@ export const createCustomer = async (req, res) => {
     });
 
     const agentAuth = await Auth.findOne({
-      userId: assignedAgentId,
+      userId: finalAssignedAgent,
       role: "agent",
     });
 
@@ -296,10 +309,10 @@ export const getAllCustomers = async (req, res) => {
     let customers;
 
     if (req.user.role === "admin") {
-      // ✅ Admin sees all customers
+      // Admin sees all customers
       customers = await Customer.find({}).lean();
     } else if (req.user.role === "agent") {
-      // ✅ Agent sees only their customers
+      // Agent sees only their customers
       customers = await Customer.find({
         assignedAgentId: req.user.id,
       }).lean();

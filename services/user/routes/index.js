@@ -37,7 +37,7 @@ router.post("/create-admin", createAdmin);
 router.get(
   "/customer/:customerId",
   authenticateToken,
-  authorizeRoles("agent", "admin"),
+  authorizeRoles("agent", "admin", "customer"),
   getCustomerDetails
 );
 

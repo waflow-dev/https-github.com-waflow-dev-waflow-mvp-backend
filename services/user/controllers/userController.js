@@ -434,6 +434,7 @@ export const updateCustomer = async (req, res) => {
   try {
     const { customerId } = req.params;
     const {
+      assignedAgentId,
       firstName,
       middleName,
       lastName,
@@ -454,6 +455,7 @@ export const updateCustomer = async (req, res) => {
 
     // Prepare customer updates
     const updateData = {};
+    if (assignedAgentId) updateData.assignedAgentId = assignedAgentId;
     if (firstName) updateData.firstName = firstName;
     if (middleName) updateData.middleName = middleName;
     if (lastName) updateData.lastName = lastName;

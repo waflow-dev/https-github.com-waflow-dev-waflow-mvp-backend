@@ -57,12 +57,13 @@ export const createDocument = async (req, res) => {
       fileUrl,
       uploadedBy: user.id,
       uploadedByRole: user.role,
+      uploadedByFullName: user.fullName,
       expiryDate,
       notes: {
         message: notes,
         addedBy: user.id,
         addedByRole: user.role,
-        addedByFullName: user.addedByFullName,
+        addedByFullName: user.fullName,
       },
     });
 

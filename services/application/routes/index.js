@@ -27,7 +27,7 @@ router.post(
 
 // Update Onboarding Details - customer
 router.put(
-  "/onboarding/:customerId",
+  "/onboarding/:applicationId",
   authenticateToken,
   authorizeRoles("customer"),
   updateOnboardingDetails

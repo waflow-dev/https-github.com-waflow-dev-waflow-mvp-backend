@@ -179,7 +179,7 @@ export const updateOnboardingDetails = async (req, res) => {
     if (shareholderDetails) application.shareholderDetails = shareholderDetails;
 
     //  Update status & save
-    application.status = "Waiting for Agent Review";
+    application.status = "Ready for Processing";
     await application.save();
 
     const customerAuth = await Auth.findOne({
@@ -678,7 +678,7 @@ export const getApplicationsByCustomerId = async (req, res) => {
     }
 
     //  Find all applications linked to this customer
-    const applications = await Application.find({ customer: customerId })
+    let applications = await Application.find({ customer: customerId })
       .populate("customer") // populate customer details
       .populate("assignedAgent"); // populate assigned agent details
 
@@ -718,6 +718,21 @@ export const getApplicationsByCustomerId = async (req, res) => {
         }
       }
     }
+
+    // Add portalState for customer portal usage
+    applications = applications.map((app) => {
+      const appObj = app.toObject();
+
+      if (appObj.status === "New") {
+        appObj.portalState = "Initial";
+      } else if (appObj.status === "Ready for Processing") {
+        appObj.portalState = "Workflow";
+      } else {
+        appObj.portalState = "Other"; // fallback, keeps API robust
+      }
+
+      return appObj;
+    });
 
     //  Send back both customer info & applications
     res.status(200).json({

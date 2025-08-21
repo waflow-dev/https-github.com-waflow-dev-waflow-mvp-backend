@@ -583,12 +583,11 @@ export const addNote = async (req, res) => {
   const { message } = req.body;
   const user = req.user;
 
+  console.log(user.id, user.role);
   try {
     const application = await Application.findOne({ _id: applicationId })
       .populate("customer")
       .populate("assignedAgent");
-
-    console.log(application);
 
     if (!application) {
       return res.status(404).json({ message: "Application not found" });

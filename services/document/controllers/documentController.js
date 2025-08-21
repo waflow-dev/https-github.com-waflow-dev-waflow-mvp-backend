@@ -288,6 +288,11 @@ export const getApplicationDocuments = async (req, res) => {
       success: true,
       applicationDocs,
       customerDocs,
+      counts: {
+        applicationDocsCount: applicationDocs.length,
+        customerDocsCount: customerDocs.length,
+        totalDocsCount: applicationDocs.length + customerDocs.length,
+      },
     });
   } catch (err) {
     res.status(500).json({

@@ -16,6 +16,6 @@ router.get("/agent/:agentId", getAgentNotifications);
 router.get("/admin/:adminId", getAdminNotifications);
 router.get("/", authenticateToken, getUnreadNotifications);
 router.patch("/read/:id", markAsRead);
-router.patch("/clear-all", clearAllNotifications);
+router.patch("/clear-all", authenticateToken, clearAllNotifications);
 
 export default router;

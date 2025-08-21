@@ -41,6 +41,10 @@ const documentVaultSchema = new mongoose.Schema(
       enum: ["agent", "admin", "customer"],
       required: true,
     },
+    uploadedByFullName: {
+      type: String,
+      required: false, // optional, but recommended so you always save it
+    },
 
     expiryDate: Date,
 

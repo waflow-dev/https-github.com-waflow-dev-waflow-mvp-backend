@@ -13,9 +13,8 @@ export const authenticateToken = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    // console.log("Header token:", token);
+
     const userId = decoded.id;
-    // console.log("Decoded ID:", decoded.id);
 
     // 1. Validate token from Redis
     const redisToken = await redis.get(`session:${userId}`);

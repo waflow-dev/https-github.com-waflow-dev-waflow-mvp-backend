@@ -99,6 +99,7 @@ export const createApplication = async (req, res) => {
       officeType,
       notes: {
         message: additionalNotes,
+        addedByFullName: req.user.fullName,
         addedBy: req.user.id,
         addedByRole: req.user.role,
       },
@@ -122,6 +123,7 @@ export const createApplication = async (req, res) => {
         fileUrl: entry.receiptUpload, // actual uploaded receipt
         uploadedBy: req.user.id,
         uploadedByRole: req.user.role,
+        uploadedByFullName: req.user.uploadedByFullName,
       }));
 
     if (receiptDocs.length > 0) {
@@ -480,6 +482,7 @@ export const updateStepStatus = async (req, res) => {
     stepToUpdate.updatedAt = new Date();
     stepToUpdate.updatedBy = user.id;
     stepToUpdate.updatedByRole = user.role;
+    stepToUpdate.updatedByFullName = user.fullName;
 
     // Update application status based on step completion
     if (status === "Approved") {
@@ -597,6 +600,7 @@ export const addNote = async (req, res) => {
       message,
       addedBy: user.id,
       addedByRole: user.role,
+      addedByFullName: user.fullName,
       timestamp: new Date(),
     });
 

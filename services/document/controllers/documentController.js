@@ -48,8 +48,6 @@ export const createDocument = async (req, res) => {
       }
     }
 
-    console.log(user);
-
     const newDoc = await Document.create({
       documentName,
       documentType,
@@ -64,6 +62,7 @@ export const createDocument = async (req, res) => {
         message: notes,
         addedBy: user.id,
         addedByRole: user.role,
+        addedByFullName: user.addedByFullName,
       },
     });
 
@@ -117,7 +116,7 @@ export const createDocument = async (req, res) => {
 
     res.status(201).json({
       success: true,
-      message: "Document saved and step updated successfully",
+      message: "Document saved successfully",
       data: newDoc,
     });
   } catch (err) {
@@ -332,13 +331,20 @@ export const addDocumentNote = async (req, res) => {
   const { message } = req.body;
   const addedBy = req.user.id;
   const addedByRole = req.user.role;
+  const addedByFullName = req.user.fullName;
 
   try {
     const doc = await Document.findById(id);
     if (!doc) return res.status(404).json({ message: "Document not found" });
 
     if (!doc.notes) doc.notes = [];
-    doc.notes.push({ message, addedBy, addedByRole, timestamp: new Date() });
+    doc.notes.push({
+      message,
+      addedBy,
+      addedByRole,
+      addedByFullName,
+      timestamp: new Date(),
+    });
     await doc.save();
 
     await logAction({

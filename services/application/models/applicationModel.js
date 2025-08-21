@@ -28,11 +28,19 @@ const stepSchema = new mongoose.Schema({
     enum: ["customer", "agent", "admin"],
     required: false,
   },
+  updatedByFullName: {
+    type: String,
+    required: false, // optional, but recommended so you always save it
+  },
 });
 
 //  Notes schema (used by agents/managers)
 const noteSchema = new mongoose.Schema({
   message: String,
+  addedByFullName: {
+    type: String,
+    required: false, // optional, but recommended so you always save it
+  },
   addedBy: {
     type: mongoose.Schema.Types.ObjectId,
     required: true,

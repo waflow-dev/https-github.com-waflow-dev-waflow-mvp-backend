@@ -129,6 +129,7 @@ const applicationSchema = new mongoose.Schema(
     },
     proposedCompanyNamesEN: { type: String, required: true },
     proposedCompanyNameAR: { type: String },
+    jurisdiction: { type: String },
     officeRequired: { type: Boolean },
     officeType: {
       type: String,

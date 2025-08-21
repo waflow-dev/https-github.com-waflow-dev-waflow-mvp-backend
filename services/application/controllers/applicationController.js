@@ -40,6 +40,7 @@ export const createApplication = async (req, res) => {
     legalForm,
     proposedCompanyNamesEN,
     proposedCompanyNameAR,
+    jurisdiction,
     officeRequired,
     officeType,
     additionalNotes,
@@ -93,6 +94,7 @@ export const createApplication = async (req, res) => {
       legalForm,
       proposedCompanyNamesEN,
       proposedCompanyNameAR,
+      jurisdiction,
       officeRequired,
       officeType,
       notes: {
@@ -261,6 +263,7 @@ export const updateApplication = async (req, res) => {
       "legalForm",
       "proposedCompanyNamesEN",
       "proposedCompanyNameAR",
+      "jurisdiction",
       "officeRequired",
       "officeType",
       "applicationNotes",

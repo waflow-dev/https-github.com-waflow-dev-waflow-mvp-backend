@@ -123,7 +123,7 @@ export const createApplication = async (req, res) => {
         fileUrl: entry.receiptUpload, // actual uploaded receipt
         uploadedBy: req.user.id,
         uploadedByRole: req.user.role,
-        uploadedByFullName: req.user.uploadedByFullName,
+        uploadedByFullName: req.user.fullName,
       }));
 
     if (receiptDocs.length > 0) {
@@ -206,6 +206,94 @@ export const updateOnboardingDetails = async (req, res) => {
     //  Update status & save
     application.status = "Ready for Processing";
     await application.save();
+
+    // Collect file uploads to save in DocumentVault
+    const filesToSave = [];
+
+    // Sponsor details uploads
+    if (sponsorDetails?.passportCopy) {
+      filesToSave.push({
+        documentName: "Sponsor Passport Copy",
+        documentType: "Passport",
+        linkedTo: application.customer,
+        linkedModel: "Customer",
+        fileUrl: sponsorDetails.passportCopy,
+        uploadedBy: req.user.id,
+        uploadedByRole: req.user.role,
+        uploadedByFullName: req.user.firstName || "Customer",
+      });
+    }
+
+    if (sponsorDetails?.emiratesId) {
+      filesToSave.push({
+        documentName: "Sponsor Emirates ID",
+        documentType: "Emirates ID",
+        linkedTo: application.customer,
+        linkedModel: "Customer",
+        fileUrl: sponsorDetails.emiratesId,
+        uploadedBy: req.user.id,
+        uploadedByRole: req.user.role,
+        uploadedByFullName: req.user.firstName || "Customer",
+      });
+    }
+
+    // Shareholder details uploads
+    if (shareholderDetails?.passportCopy) {
+      filesToSave.push({
+        documentName: "Shareholder Passport Copy",
+        documentType: "Passport",
+        linkedTo: application.customer,
+        linkedModel: "Customer",
+        fileUrl: shareholderDetails.passportCopy,
+        uploadedBy: req.user.id,
+        uploadedByRole: req.user.role,
+        uploadedByFullName: req.user.firstName || "Customer",
+      });
+    }
+
+    if (shareholderDetails?.emiratesId) {
+      filesToSave.push({
+        documentName: "Shareholder Emirates ID",
+        documentType: "Emirates ID",
+        linkedTo: application.customer,
+        linkedModel: "Customer",
+        fileUrl: shareholderDetails.emiratesId,
+        uploadedBy: req.user.id,
+        uploadedByRole: req.user.role,
+        uploadedByFullName: req.user.firstName || "Customer",
+      });
+    }
+
+    if (shareholderDetails?.passportPhoto) {
+      filesToSave.push({
+        documentName: "Shareholder Passport Photo",
+        documentType: "Photo",
+        linkedTo: application.customer,
+        linkedModel: "Customer",
+        fileUrl: shareholderDetails.passportPhoto,
+        uploadedBy: req.user.id,
+        uploadedByRole: req.user.role,
+        uploadedByFullName: req.user.firstName || "Customer",
+      });
+    }
+
+    if (shareholderDetails?.nocLetter) {
+      filesToSave.push({
+        documentName: "Shareholder NOC Letter",
+        documentType: "NOC",
+        linkedTo: application.customer,
+        linkedModel: "Customer",
+        fileUrl: shareholderDetails.nocLetter,
+        uploadedBy: req.user.id,
+        uploadedByRole: req.user.role,
+        uploadedByFullName: req.user.firstName || "Customer",
+      });
+    }
+
+    // Bulk insert into DocumentVault
+    if (filesToSave.length > 0) {
+      await Document.insertMany(filesToSave);
+    }
 
     const customerAuth = await Auth.findOne({
       userId: application.customer,

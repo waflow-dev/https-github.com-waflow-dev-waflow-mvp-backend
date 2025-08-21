@@ -243,10 +243,10 @@ export const getCustomerDocuments = async (req, res) => {
 // Updated: getApplicationDocuments
 export const getApplicationDocuments = async (req, res) => {
   const { appId } = req.params;
-  const { status, documentType } = req.query;
+  const { status, linkedModel } = req.query;
 
   try {
-    // 🔹 First get the application to know its linked customer
+    // First get the application to know its linked customer
     const application = await Application.findOne({
       _id: appId,
     }).select("customer");
@@ -273,9 +273,9 @@ export const getApplicationDocuments = async (req, res) => {
       filterCustomer.status = status;
     }
 
-    if (documentType) {
-      filterApp.documentType = documentType;
-      filterCustomer.documentType = documentType;
+    if (linkedModel) {
+      filterApp.linkedModel = linkedModel;
+      filterCustomer.linkedModel = linkedModel;
     }
 
     // 🔹 Fetch both application and customer docs

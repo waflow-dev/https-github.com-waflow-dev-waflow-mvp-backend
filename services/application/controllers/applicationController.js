@@ -111,6 +111,23 @@ export const createApplication = async (req, res) => {
       steps,
     });
 
+    // Create DocumentVault entries for receipt uploads
+    const receiptDocs = paymentEntries
+      .filter((entry) => entry.receiptUpload) // only those with receipts
+      .map((entry) => ({
+        documentName: "Payment Receipt", // dummy
+        documentType: "Receipt", // dummy
+        linkedTo: newApplication._id,
+        linkedModel: "Application",
+        fileUrl: entry.receiptUpload, // actual uploaded receipt
+        uploadedBy: req.user.id,
+        uploadedByRole: req.user.role,
+      }));
+
+    if (receiptDocs.length > 0) {
+      await Document.insertMany(receiptDocs);
+    }
+
     await logAction({
       type: "application",
       action: "application_created",

@@ -596,8 +596,8 @@ export const addNote = async (req, res) => {
 
     application.notes.push({
       message,
-      addedBy: user?.id,
-      addedByRole: user?.role,
+      addedBy: user.id,
+      addedByRole: user.role,
       timestamp: new Date(),
     });
 
@@ -609,7 +609,7 @@ export const addNote = async (req, res) => {
         `${application.customer.firstName} Left a Note on Their Application`,
         `${application.customer.firstName} has added a comment to their application. Log in to respond.`
       );
-    } else if (user.role == "agent") {
+    } else if (user.role == "agent" || user.role == "admin") {
       await sendEmail(
         application.customer.email,
         `Your Agent Left a Note on Your Application`,

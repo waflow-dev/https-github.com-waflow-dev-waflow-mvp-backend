@@ -103,7 +103,11 @@ export const createApplication = async (req, res) => {
         addedByRole: req.user.role,
       },
       totalAgreedCost,
-      paymentEntries,
+      paymentEntries: paymentEntries.filter((entry) =>
+        Object.values(entry).some(
+          (val) => val !== null && val !== "" && val !== undefined
+        )
+      ),
       steps,
     });
 

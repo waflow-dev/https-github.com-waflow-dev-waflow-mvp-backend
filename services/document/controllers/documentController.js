@@ -247,7 +247,10 @@ export const getApplicationDocuments = async (req, res) => {
 
   try {
     // 🔹 First get the application to know its linked customer
-    const application = await Application.findById(appId).select("customer");
+    const application = await Application.findOne({
+      _id: appId,
+    }).select("customer");
+
     if (!application) {
       return res.status(404).json({
         success: false,

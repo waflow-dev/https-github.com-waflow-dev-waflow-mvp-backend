@@ -217,7 +217,6 @@ export const createAdmin = async (req, res) => {
     await logAction({
       type: "user",
       action: "admin_created",
-      performedBy: req.user.id,
       targetUser: admin._id,
       details: { name: fullName, email },
     });

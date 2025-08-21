@@ -5,7 +5,6 @@ import Admin from "../../user/models/adminModel.js";
 import Agent from "../../user/models/agentModel.js";
 import Auth from "../../auth/models/authModel.js";
 import { logAction } from "../../audit logs/utils/logHelper.js";
-import { uploadToCloudinaryFromBuffer } from "../utils/cloudinary.js";
 import workflowConfig from "../../application/utils/workflowConfig.js";
 import axios from "axios";
 import mongoose from "mongoose";
@@ -204,7 +203,7 @@ export const updateDocumentStatus = async (req, res) => {
   }
 };
 
-// ✅ Retain: getCustomerDocuments
+// Retain: getCustomerDocuments
 export const getCustomerDocuments = async (req, res) => {
   const { customerId } = req.params;
   const { status, documentType } = req.query;
@@ -241,7 +240,7 @@ export const getCustomerDocuments = async (req, res) => {
   }
 };
 
-// ✅ Updated: getApplicationDocuments
+// Updated: getApplicationDocuments
 export const getApplicationDocuments = async (req, res) => {
   const { appId } = req.params;
   const { status, documentType } = req.query;

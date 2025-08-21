@@ -40,7 +40,7 @@ router.get(
 router.get(
   "/application/:appId",
   authenticateToken,
-  authorizeRoles("agent", "admin"),
+  authorizeRoles("agent", "admin", "customer"),
   getApplicationDocuments
 );
 router.get(

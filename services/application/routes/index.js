@@ -13,6 +13,7 @@ import {
   updateApplication,
   lockOrUnlockApplication,
   showApplicationWithDoucuments,
+  finalOnboarding,
 } from "../controllers/applicationController.js";
 
 const router = express.Router();
@@ -31,6 +32,13 @@ router.put(
   authenticateToken,
   authorizeRoles("customer"),
   updateOnboardingDetails
+);
+
+router.post(
+  "/finalOnboarding",
+  authenticateToken,
+  authorizeRoles("customer"),
+  finalOnboarding
 );
 
 router.patch(

@@ -77,6 +77,54 @@ const natureOfControlEnum = [
   "Other", // frontend will provide input if this is selected
 ];
 
+// Sponsor Schema
+const sponsorSchema = new mongoose.Schema({
+  firstName: String,
+  middleName: String,
+  lastName: String,
+  nationality: String,
+  passportCopy: String, // file URL
+  emiratesId: String, // file URL
+  contactNumber: String,
+  address: String,
+  relationship: {
+    type: String,
+    enum: ["Individual", "Company", "Family", "Other"],
+  },
+});
+
+// Shareholder Schema
+const shareholderSchema = new mongoose.Schema({
+  passportCopy: String,
+  emiratesId: String,
+  visaRequired: Boolean,
+  visaType: { type: String, enum: ["Investor", "Employee"] },
+  salary: Number,
+  passportPhoto: String,
+  nocLetter: String,
+  homeCountryAddress: {
+    line1: String,
+    line2: String,
+    state: String,
+    country: String,
+    zipcode: String,
+  },
+  uaeMobile: String,
+  homeMobile: String,
+  email: String,
+  nationality: String,
+  motherName: String,
+  fatherName: String,
+  sourceOfFunds: String,
+  shareholderName: String,
+  shareholderNationality: String,
+  shareholderPassportCopy: String,
+  ownershipPercentage: Number,
+  designation: String,
+  natureOfControl: [{ type: String, enum: natureOfControlEnum }],
+  natureOfControlOtherText: { type: String },
+});
+
 const applicationSchema = new mongoose.Schema(
   {
     applicationId: { type: String, unique: true }, // Will be like "APP-0001"
@@ -162,51 +210,9 @@ const applicationSchema = new mongoose.Schema(
     basicInvestment: { type: Number },
 
     sponsorRequired: { type: Boolean },
-    sponsorDetails: {
-      firstName: String,
-      middleName: String,
-      lastName: String,
-      nationality: String,
-      passportCopy: String, // file URL
-      emiratesId: String, // file URL
-      contactNumber: String,
-      address: String,
-      relationship: {
-        type: String,
-        enum: ["Individual", "Company", "Family", "Other"],
-      },
-    },
+    sponsorDetails: [sponsorSchema],
 
-    shareholderDetails: {
-      passportCopy: String,
-      emiratesId: String,
-      visaRequired: Boolean,
-      visaType: { type: String, enum: ["Investor", "Employee"] },
-      salary: Number,
-      passportPhoto: String,
-      nocLetter: String,
-      homeCountryAddress: {
-        line1: String,
-        line2: String,
-        state: String,
-        country: String,
-        zipcode: String,
-      },
-      uaeMobile: String,
-      homeMobile: String,
-      email: String,
-      nationality: String,
-      motherName: String,
-      fatherName: String,
-      sourceOfFunds: String,
-      shareholderName: String,
-      shareholderNationality: String,
-      shareholderPassportCopy: String,
-      ownershipPercentage: Number,
-      designation: String,
-      natureOfControl: [{ type: String, enum: natureOfControlEnum }],
-      natureOfControlOtherText: { type: String }, // only if "Other" selected
-    },
+    shareholderDetails: [shareholderSchema],
 
     // 📝 Internal
     steps: [stepSchema],

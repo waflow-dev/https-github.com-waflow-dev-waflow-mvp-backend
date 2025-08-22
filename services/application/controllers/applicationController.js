@@ -204,7 +204,7 @@ export const updateOnboardingDetails = async (req, res) => {
     if (shareholderDetails) application.shareholderDetails = shareholderDetails;
 
     //  Update status & save
-    application.status = "Ready for Processing";
+    // application.status = "Ready for Processing";
     await application.save();
 
     // Collect file uploads to save in DocumentVault
@@ -295,44 +295,44 @@ export const updateOnboardingDetails = async (req, res) => {
       await Document.insertMany(filesToSave);
     }
 
-    const customerAuth = await Auth.findOne({
-      userId: application.customer,
-      role: "customer",
-    });
+    // const customerAuth = await Auth.findOne({
+    //   userId: application.customer,
+    //   role: "customer",
+    // });
 
-    const agentAuth = await Auth.findOne({
-      userId: application.assignedAgent,
-      role: "agent",
-    });
+    // const agentAuth = await Auth.findOne({
+    //   userId: application.assignedAgent,
+    //   role: "agent",
+    // });
 
-    await sendEmail(
-      agentAuth.email,
-      `New Application Submitted by ${customerAuth.email}`,
-      `A new application has been submitted. Please review and begin processing.`
-    );
+    // await sendEmail(
+    //   agentAuth.email,
+    //   `New Application Submitted by ${customerAuth.email}`,
+    //   `A new application has been submitted. Please review and begin processing.`
+    // );
 
-    //  Notify agent
-    await createNotification({
-      userId: application.assignedAgent,
-      userRole: "agent",
-      title: "Onboarding Submitted",
-      message: `${customerAuth.firstName} has submitted their onboarding form.`,
-      type: "application",
-      referenceId: application._id,
-      referenceType: "Application",
-    });
+    // //  Notify agent
+    // await createNotification({
+    //   userId: application.assignedAgent,
+    //   userRole: "agent",
+    //   title: "Onboarding Submitted",
+    //   message: `${customerAuth.firstName} has submitted their onboarding form.`,
+    //   type: "application",
+    //   referenceId: application._id,
+    //   referenceType: "Application",
+    // });
 
-    //  Log action
-    await logAction({
-      type: "application",
-      action: "onboarding_submitted",
-      performedBy: req.user.id,
-      targetUser: customerAuth?._id || null,
-      details: {
-        applicationId: application._id,
-        fieldsUpdated: Object.keys(req.body),
-      },
-    });
+    // //  Log action
+    // await logAction({
+    //   type: "application",
+    //   action: "onboarding_submitted",
+    //   performedBy: req.user.id,
+    //   targetUser: customerAuth?._id || null,
+    //   details: {
+    //     applicationId: application._id,
+    //     fieldsUpdated: Object.keys(req.body),
+    //   },
+    // });
 
     res.status(200).json({
       success: true,
@@ -346,6 +346,72 @@ export const updateOnboardingDetails = async (req, res) => {
       message: "Failed to submit onboarding details",
       error: err.message,
     });
+  }
+};
+
+// POST /api/applications/finalOnboarding
+export const finalOnboarding = async (req, res) => {
+  const { applicationId } = req.body;
+
+  try {
+    const application = await Application.findOne({
+      applicationId: applicationId,
+    });
+    if (!application) {
+      return res.status(404).json({ message: "Application not found" });
+    }
+
+    // Update application status
+    application.status = "Ready for Processing";
+    await application.save();
+
+    // Fetch customer + agent auth
+    const customerAuth = await Auth.findOne({
+      userId: application.customer,
+      role: "customer",
+    });
+
+    const agentAuth = await Auth.findOne({
+      userId: application.assignedAgent,
+      role: "agent",
+    });
+
+    // Send email notification to agent
+    await sendEmail(
+      agentAuth.email,
+      `New Application Submitted by ${customerAuth.email}`,
+      `A new application has been submitted. Please review and begin processing.`
+    );
+
+    // Create in-app notification
+    await createNotification({
+      userId: application.assignedAgent,
+      userRole: "agent",
+      title: "Onboarding Submitted",
+      message: `${customerAuth.firstName} has submitted their onboarding form.`,
+      type: "application",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    // Log action
+    await logAction({
+      type: "application",
+      action: "onboarding_submitted",
+      performedBy: req.user.id,
+      targetUser: customerAuth?._id || null,
+      details: {
+        applicationId: application._id,
+      },
+    });
+
+    return res.status(200).json({
+      message: "Final onboarding completed successfully",
+      application,
+    });
+  } catch (error) {
+    console.error("Error in finalOnboarding:", error);
+    return res.status(500).json({ message: "Internal server error" });
   }
 };
 

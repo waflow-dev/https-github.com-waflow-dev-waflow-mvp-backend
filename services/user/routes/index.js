@@ -41,7 +41,12 @@ router.get(
   getCustomerDetails
 );
 
-router.get("/agents/:agentId", getAgentDetails);
+router.get(
+  "/agents/:agentId",
+  authenticateToken,
+  authorizeRoles("admin", "agent", "customer"),
+  getAgentDetails
+);
 
 router.get(
   "/admin/profile",

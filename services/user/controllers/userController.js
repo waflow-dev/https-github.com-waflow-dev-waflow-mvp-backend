@@ -501,7 +501,7 @@ export const updateCustomer = async (req, res) => {
       authUpdateData,
       { new: true }
     );
-    console.log(updatedAuth);
+    console.log(updatedAuth, updatedCustomer);
 
     if (!updatedAuth) {
       return res.status(404).json({ message: "Auth record not found" });

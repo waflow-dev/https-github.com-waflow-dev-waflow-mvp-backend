@@ -840,12 +840,9 @@ export const getApplicationsByCustomerId = async (req, res) => {
 
       if (appObj.status === "New") {
         appObj.portalState = "Initial";
-      } else if (appObj.status === "Ready for Processing") {
-        appObj.portalState = "Workflow";
       } else {
-        appObj.portalState = "Other"; // fallback, keeps API robust
+        appObj.portalState = "Workflow";
       }
-
       return appObj;
     });
 

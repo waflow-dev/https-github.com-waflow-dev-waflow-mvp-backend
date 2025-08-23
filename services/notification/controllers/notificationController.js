@@ -97,11 +97,8 @@ export const getAgentNotifications = async (req, res) => {
 
 // 🟩 Get Notifications for Admin
 export const getAdminNotifications = async (req, res) => {
-  const adminId = req.params.adminId;
-
   try {
     const notifications = await Notification.find({
-      userId: adminId,
       userRole: "admin",
     }).sort({ createdAt: -1 });
 

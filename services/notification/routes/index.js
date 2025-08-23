@@ -13,7 +13,7 @@ const router = express.Router();
 
 router.get("/customer/:customerId", getCustomerNotifications);
 router.get("/agent/:agentId", getAgentNotifications);
-router.get("/admin/:adminId", getAdminNotifications);
+router.get("/admin", getAdminNotifications);
 router.get("/", authenticateToken, getUnreadNotifications);
 router.patch("/read/:id", markAsRead);
 router.patch("/clear-all", authenticateToken, clearAllNotifications);

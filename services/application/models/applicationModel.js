@@ -51,7 +51,7 @@ const noteSchema = new mongoose.Schema({
     enum: ["customer", "agent", "admin"],
     required: true,
   },
-  timestamp: { type: Date, default: Date.now },
+  timestamp: { type: Date },
 });
 
 // Payment Entry schema (repeatable group)

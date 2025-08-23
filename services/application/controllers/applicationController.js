@@ -85,6 +85,16 @@ export const createApplication = async (req, res) => {
       });
     }
 
+    const notesArray = [];
+    if (additionalNotes && additionalNotes.trim() !== "") {
+      notesArray.push({
+        message: additionalNotes,
+        addedByFullName: req.user.fullName,
+        addedBy: req.user.id,
+        addedByRole: req.user.role,
+      });
+    }
+
     const newApplication = await Application.create({
       applicationId,
       customer: customerId,
@@ -97,12 +107,7 @@ export const createApplication = async (req, res) => {
       jurisdiction,
       officeRequired,
       officeType,
-      notes: {
-        message: additionalNotes,
-        addedByFullName: req.user.fullName,
-        addedBy: req.user.id,
-        addedByRole: req.user.role,
-      },
+      notes: notesArray,
       totalAgreedCost,
       paymentEntries: paymentEntries.filter((entry) =>
         Object.values(entry).some(
@@ -200,8 +205,10 @@ export const updateOnboardingDetails = async (req, res) => {
       application.basicInvestment = basicInvestment;
     if (sponsorRequired !== undefined)
       application.sponsorRequired = sponsorRequired;
-    if (sponsorDetails) application.sponsorDetails = sponsorDetails;
-    if (shareholderDetails) application.shareholderDetails = shareholderDetails;
+    if (Array.isArray(sponsorDetails))
+      application.sponsorDetails = sponsorDetails;
+    if (Array.isArray(shareholderDetails))
+      application.shareholderDetails = shareholderDetails;
 
     //  Update status & save
     // application.status = "Ready for Processing";
@@ -211,82 +218,87 @@ export const updateOnboardingDetails = async (req, res) => {
     const filesToSave = [];
 
     // Sponsor details uploads
-    if (sponsorDetails?.passportCopy) {
-      filesToSave.push({
-        documentName: "Sponsor Passport Copy",
-        documentType: "Passport",
-        linkedTo: application.customer,
-        linkedModel: "Customer",
-        fileUrl: sponsorDetails.passportCopy,
-        uploadedBy: req.user.id,
-        uploadedByRole: req.user.role,
-        uploadedByFullName: req.user.firstName || "Customer",
-      });
-    }
-
-    if (sponsorDetails?.emiratesId) {
-      filesToSave.push({
-        documentName: "Sponsor Emirates ID",
-        documentType: "Emirates ID",
-        linkedTo: application.customer,
-        linkedModel: "Customer",
-        fileUrl: sponsorDetails.emiratesId,
-        uploadedBy: req.user.id,
-        uploadedByRole: req.user.role,
-        uploadedByFullName: req.user.firstName || "Customer",
+    // Sponsor details uploads (loop through each sponsor)
+    if (Array.isArray(sponsorDetails)) {
+      sponsorDetails.forEach((sponsor, index) => {
+        if (sponsor.passportCopy) {
+          filesToSave.push({
+            documentName: `Sponsor ${index + 1} Passport Copy`,
+            documentType: "Passport",
+            linkedTo: application.customer,
+            linkedModel: "Customer",
+            fileUrl: sponsor.passportCopy,
+            uploadedBy: req.user.id,
+            uploadedByRole: req.user.role,
+            uploadedByFullName: req.user.firstName || "Customer",
+          });
+        }
+        if (sponsor.emiratesId) {
+          filesToSave.push({
+            documentName: `Sponsor ${index + 1} Emirates ID`,
+            documentType: "Emirates ID",
+            linkedTo: application.customer,
+            linkedModel: "Customer",
+            fileUrl: sponsor.emiratesId,
+            uploadedBy: req.user.id,
+            uploadedByRole: req.user.role,
+            uploadedByFullName: req.user.firstName || "Customer",
+          });
+        }
       });
     }
 
     // Shareholder details uploads
-    if (shareholderDetails?.passportCopy) {
-      filesToSave.push({
-        documentName: "Shareholder Passport Copy",
-        documentType: "Passport",
-        linkedTo: application.customer,
-        linkedModel: "Customer",
-        fileUrl: shareholderDetails.passportCopy,
-        uploadedBy: req.user.id,
-        uploadedByRole: req.user.role,
-        uploadedByFullName: req.user.firstName || "Customer",
-      });
-    }
-
-    if (shareholderDetails?.emiratesId) {
-      filesToSave.push({
-        documentName: "Shareholder Emirates ID",
-        documentType: "Emirates ID",
-        linkedTo: application.customer,
-        linkedModel: "Customer",
-        fileUrl: shareholderDetails.emiratesId,
-        uploadedBy: req.user.id,
-        uploadedByRole: req.user.role,
-        uploadedByFullName: req.user.firstName || "Customer",
-      });
-    }
-
-    if (shareholderDetails?.passportPhoto) {
-      filesToSave.push({
-        documentName: "Shareholder Passport Photo",
-        documentType: "Photo",
-        linkedTo: application.customer,
-        linkedModel: "Customer",
-        fileUrl: shareholderDetails.passportPhoto,
-        uploadedBy: req.user.id,
-        uploadedByRole: req.user.role,
-        uploadedByFullName: req.user.firstName || "Customer",
-      });
-    }
-
-    if (shareholderDetails?.nocLetter) {
-      filesToSave.push({
-        documentName: "Shareholder NOC Letter",
-        documentType: "NOC",
-        linkedTo: application.customer,
-        linkedModel: "Customer",
-        fileUrl: shareholderDetails.nocLetter,
-        uploadedBy: req.user.id,
-        uploadedByRole: req.user.role,
-        uploadedByFullName: req.user.firstName || "Customer",
+    if (Array.isArray(shareholderDetails)) {
+      shareholderDetails.forEach((shareholder, index) => {
+        if (shareholder.passportCopy) {
+          filesToSave.push({
+            documentName: `Shareholder ${index + 1} Passport Copy`,
+            documentType: "Passport",
+            linkedTo: application.customer,
+            linkedModel: "Customer",
+            fileUrl: shareholder.passportCopy,
+            uploadedBy: req.user.id,
+            uploadedByRole: req.user.role,
+            uploadedByFullName: req.user.firstName || "Customer",
+          });
+        }
+        if (shareholder.emiratesId) {
+          filesToSave.push({
+            documentName: `Shareholder ${index + 1} Emirates ID`,
+            documentType: "Emirates ID",
+            linkedTo: application.customer,
+            linkedModel: "Customer",
+            fileUrl: shareholder.emiratesId,
+            uploadedBy: req.user.id,
+            uploadedByRole: req.user.role,
+            uploadedByFullName: req.user.firstName || "Customer",
+          });
+        }
+        if (shareholder.passportPhoto) {
+          filesToSave.push({
+            documentName: `Shareholder ${index + 1} Passport Photo`,
+            documentType: "Photo",
+            linkedTo: application.customer,
+            linkedModel: "Customer",
+            fileUrl: shareholder.passportPhoto,
+            uploadedBy: req.user.id,
+            uploadedByRole: req.user.role,
+            uploadedByFullName: req.user.firstName || "Customer",
+          });
+        }
+        if (shareholder.nocLetter) {
+          filesToSave.push({
+            documentName: `Shareholder ${index + 1} NOC Letter`,
+            documentType: "NOC",
+            linkedTo: application.customer,
+            linkedModel: "Customer",
+            fileUrl: shareholder.nocLetter,
+            uploadedBy: req.user.id,
+            uploadedByRole: req.user.role,
+            uploadedByFullName: req.user.firstName || "Customer",
+          });
+        }
       });
     }
 
@@ -294,45 +306,6 @@ export const updateOnboardingDetails = async (req, res) => {
     if (filesToSave.length > 0) {
       await Document.insertMany(filesToSave);
     }
-
-    // const customerAuth = await Auth.findOne({
-    //   userId: application.customer,
-    //   role: "customer",
-    // });
-
-    // const agentAuth = await Auth.findOne({
-    //   userId: application.assignedAgent,
-    //   role: "agent",
-    // });
-
-    // await sendEmail(
-    //   agentAuth.email,
-    //   `New Application Submitted by ${customerAuth.email}`,
-    //   `A new application has been submitted. Please review and begin processing.`
-    // );
-
-    // //  Notify agent
-    // await createNotification({
-    //   userId: application.assignedAgent,
-    //   userRole: "agent",
-    //   title: "Onboarding Submitted",
-    //   message: `${customerAuth.firstName} has submitted their onboarding form.`,
-    //   type: "application",
-    //   referenceId: application._id,
-    //   referenceType: "Application",
-    // });
-
-    // //  Log action
-    // await logAction({
-    //   type: "application",
-    //   action: "onboarding_submitted",
-    //   performedBy: req.user.id,
-    //   targetUser: customerAuth?._id || null,
-    //   details: {
-    //     applicationId: application._id,
-    //     fieldsUpdated: Object.keys(req.body),
-    //   },
-    // });
 
     res.status(200).json({
       success: true,

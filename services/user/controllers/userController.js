@@ -30,7 +30,9 @@ export const createCustomer = async (req, res) => {
 
     const existing = await Auth.findOne({ email });
     if (existing)
-      return res.status(400).json({ message: "Customer already exists" });
+      return res
+        .status(400)
+        .json({ message: "Account with same email address already exists" });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const customerId = await generateCustomId(Customer, "CX", "customerId");
@@ -131,7 +133,10 @@ export const createAgent = async (req, res) => {
 
   try {
     const exists = await Auth.findOne({ email });
-    if (exists) return res.status(400).json({ message: "User already exists" });
+    if (exists)
+      return res
+        .status(400)
+        .json({ message: "Account with same email address already exists" });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const agentId = await generateCustomId(Agent, "AG", "agentId");
@@ -184,7 +189,9 @@ export const createAdmin = async (req, res) => {
   try {
     const exists = await Auth.findOne({ email });
     if (exists)
-      return res.status(400).json({ message: "Admin already exists" });
+      return res
+        .status(400)
+        .json({ message: "Account with same email address already exists" });
 
     const passwordHash = await bcrypt.hash(password, 10);
     const adminId = await generateCustomId(Admin, "ADM", "adminId");

@@ -336,7 +336,7 @@ export const updateOnboardingDetails = async (req, res) => {
 
     res.status(200).json({
       success: true,
-      message: "Application onboarding details submitted successfully.",
+      message: "Application onboarding details saved successfully.",
       data: application,
     });
   } catch (err) {
@@ -379,14 +379,42 @@ export const finalOnboarding = async (req, res) => {
     // Send email notification to agent
     await sendEmail(
       agentAuth.email,
-      `New Application Submitted by ${customerAuth.email}`,
+      `New Application Submitted by ${req.user.firstName}`,
       `A new application has been submitted. Please review and begin processing.`
     );
 
-    // Create in-app notification
+    // Send email notification to customer
+    await sendEmail(
+      req.user.email,
+      `New Application Submitted by ${req.user.firstName}`,
+      `Your application has passed review and is now under processing.`
+    );
+
+    // Create in-app notification for Customer
+    await createNotification({
+      userId: application.customer,
+      userRole: "customer",
+      title: "Onboarding Submitted",
+      message: `${customerAuth.firstName} has submitted their onboarding form.`,
+      type: "application",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    // Create in-app notification for Agent
     await createNotification({
       userId: application.assignedAgent,
       userRole: "agent",
+      title: "Onboarding Submitted",
+      message: `${customerAuth.firstName} has submitted their onboarding form.`,
+      type: "application",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    // Create in-app notification for Admin
+    await createNotification({
+      userRole: "admin",
       title: "Onboarding Submitted",
       message: `${customerAuth.firstName} has submitted their onboarding form.`,
       type: "application",
@@ -463,7 +491,37 @@ export const updateApplication = async (req, res) => {
       role: "customer",
     });
 
-    // 3. Log action
+    // 3. Createe in-app notifications
+    await createNotification({
+      userId: application.customer,
+      userRole: "customer",
+      title: "Application Data Updated",
+      message: `Your application (${applicationId}) was updated by our team.`,
+      type: "Application Update",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    await createNotification({
+      userId: application.assignedAgent,
+      userRole: "agent",
+      title: "Application Data Updated",
+      message: `Your application (${applicationId}) was updated by our team.`,
+      type: "Application Update",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    await createNotification({
+      userRole: "admin",
+      title: "Application Data Updated",
+      message: `Your application (${applicationId}) was updated by our team.`,
+      type: "Application Update",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    // 4. Log action
     await logAction({
       type: "application",
       action: "application_updated_by_agent_admin",
@@ -473,17 +531,6 @@ export const updateApplication = async (req, res) => {
         updatedFields: Object.keys(updateFields),
         applicationId: application._id,
       },
-    });
-
-    // 4. Notify customer
-    await createNotification({
-      userId: application.customer,
-      userRole: "customer",
-      title: "Application Updated",
-      message: `Your application (${applicationId}) was updated by our team.`,
-      type: "ApplicationUpdate",
-      referenceId: application._id,
-      referenceType: "Application",
     });
 
     res.status(200).json({
@@ -662,6 +709,80 @@ export const updateStepStatus = async (req, res) => {
       `The status of “${stepName}” has been updated to ${status}.`
     );
 
+    // Create in-app notification for Customer
+    await createNotification({
+      userId: application.customer,
+      userRole: "customer",
+      title: `Step Status Updated: ${stepName}`,
+      message: `The “${stepName}” step in your application is now ${status}.`,
+      type: "application",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    // Create in-app notification for Agent
+    await createNotification({
+      userId: application.assignedAgent,
+      userRole: "agent",
+      title: `Step Status Updated: ${stepName}`,
+      message: `The “${stepName}” step in your application is now ${status}.`,
+      type: "application",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    // Create in-app notification for Admin
+    await createNotification({
+      userRole: "admin",
+      title: `Step Status Updated: ${stepName}`,
+      message: `The “${stepName}” step in your application is now ${status}.`,
+      type: "application",
+      referenceId: application._id,
+      referenceType: "Application",
+    });
+
+    // If Application is completed
+    if (application.status == "Completed") {
+      // Send email to customer
+      await sendEmail(
+        customerAuth.email,
+        `Congratulations - Your Company Setup is Complete`,
+        `Your application is complete. Relevant documents are available in the portal.`
+      );
+
+      // Create in-app notification for Customer
+      await createNotification({
+        userId: application.customer,
+        userRole: "customer",
+        title: `Application Completed`,
+        message: `Your company setup is complete. Documents are in dashboard.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+
+      // Create in-app notification for Agent
+      await createNotification({
+        userId: application.assignedAgent,
+        userRole: "agent",
+        title: `Application Completed`,
+        message: `Your company setup is complete. Documents are in dashboard.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+
+      // Create in-app notification for Admin
+      await createNotification({
+        userRole: "admin",
+        title: `Application Completed`,
+        message: `Your company setup is complete. Documents are in dashboard.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+    }
+
     // Log the action
     await logAction({
       type: "application",
@@ -760,11 +881,12 @@ export const addNote = async (req, res) => {
 
     await application.save();
 
+    // Send emails
     if (user.role == "customer") {
       await sendEmail(
         application.assignedAgent.email,
-        `${application.customer.firstName} Left a Note on Their Application`,
-        `${application.customer.firstName} has added a comment to their application. Log in to respond.`
+        `${user.firstName} Left a Note on Their Application`,
+        `${user.firstName} has added a comment to their application. Log in to respond.`
       );
     } else if (user.role == "agent" || user.role == "admin") {
       await sendEmail(
@@ -772,6 +894,73 @@ export const addNote = async (req, res) => {
         `Your Agent Left a Note on Your Application`,
         `Your agent or manager added a note on your application. Please log in to review it.`
       );
+    }
+
+    // Create in-app notifications
+    if (user.role == "customer") {
+      // Create in-app notification for Customer
+      await createNotification({
+        userId: application.customer,
+        userRole: "customer",
+        title: `Customer Note Received`,
+        message: `${user.fullName} has left a note on their application.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+
+      // Create in-app notification for Agent
+      await createNotification({
+        userId: application.assignedAgent,
+        userRole: "agent",
+        title: `Customer Note Received`,
+        message: `${user.fullName} has left a note on their application.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+
+      // Create in-app notification for Admin
+      await createNotification({
+        userRole: "admin",
+        title: `Customer Note Received`,
+        message: `${user.fullName} has left a note on their application.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+    } else if (user.role == "agent" || user.role == "admin") {
+      // Create in-app notification for Customer
+      await createNotification({
+        userId: application.customer,
+        userRole: "customer",
+        title: `Agent Note Sent to Customer`,
+        message: `Your agent has left a note on your application.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+
+      // Create in-app notification for Agent
+      await createNotification({
+        userId: application.assignedAgent,
+        userRole: "agent",
+        title: `Agent Note Sent to Customer`,
+        message: `Your agent has left a note on your application.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+
+      // Create in-app notification for Admin
+      await createNotification({
+        userRole: "admin",
+        title: `Agent Note Sent to Customer`,
+        message: `Your agent has left a note on your application.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
     }
 
     res.status(200).json({

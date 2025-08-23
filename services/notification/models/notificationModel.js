@@ -4,13 +4,11 @@ const notificationSchema = new mongoose.Schema(
   {
     userId: {
       type: mongoose.Schema.Types.ObjectId,
-      required: true,
-      refPath: "userRole", // Dynamically references Agent, Customer, or Manager
+      refPath: "userRole", // Dynamically references Agent, Customer, or Admin
     },
     userRole: {
       type: String,
-      enum: ["agent", "customer", "admin", "manager"],
-      required: true,
+      enum: ["agent", "customer", "admin"],
     },
     title: { type: String, required: true },
     message: { type: String, required: true },

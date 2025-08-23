@@ -416,6 +416,8 @@ export const finalOnboarding = async (req, res) => {
   }
 };
 
+//////////////////////////////////////////////Update Steps of workflow//////////////////////////////////////////////////////
+
 export const updateApplication = async (req, res) => {
   try {
     const { applicationId } = req.params;
@@ -444,12 +446,29 @@ export const updateApplication = async (req, res) => {
       "jurisdiction",
       "officeRequired",
       "officeType",
-      "applicationNotes",
       "totalAgreedCost",
       "paymentEntries", // Repeatable group
       "status",
       "assignedAgent",
     ];
+
+    // 🚨 Payment validation logic
+    if (updateFields.paymentEntries) {
+      const totalPaid = application.paymentEntries.reduce(
+        (sum, entry) => sum + (entry.amountPaid || 0),
+        0
+      );
+
+      if (
+        application.totalAgreedCost !== undefined &&
+        totalPaid > application.totalAgreedCost
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: `Total paid amount (AED ${totalPaid}) cannot exceed Total Agreed Cost (AED ${application.totalAgreedCost}).`,
+        });
+      }
+    }
 
     for (let key of allowedFields) {
       if (updateFields[key] !== undefined) {
@@ -520,8 +539,6 @@ export const updateApplication = async (req, res) => {
     });
   }
 };
-
-//////////////////////////////////////////////Update Steps of workflow//////////////////////////////////////////////////////
 
 // // API to approve the onboarding details provided by customer
 // export const reviewApplicationAfterOnboarding = async (req, res) => {

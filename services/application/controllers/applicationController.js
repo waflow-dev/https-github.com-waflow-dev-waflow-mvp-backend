@@ -452,9 +452,9 @@ export const updateApplication = async (req, res) => {
       "assignedAgent",
     ];
 
-    // 🚨 Payment validation logic
+    //  Payment validation logic
     if (updateFields.paymentEntries) {
-      const totalPaid = application.paymentEntries.reduce(
+      const totalPaid = updateFields.paymentEntries.reduce(
         (sum, entry) => sum + (entry.amountPaid || 0),
         0
       );

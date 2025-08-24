@@ -48,6 +48,13 @@ export const createDocument = async (req, res) => {
       }
     }
 
+    let fullName;
+    if (user.role == "customer") {
+      fullName = user.firstName;
+    } else {
+      fullName = user.fullName;
+    }
+
     const newDoc = await Document.create({
       documentName,
       documentType,
@@ -63,7 +70,7 @@ export const createDocument = async (req, res) => {
         message: notes,
         addedBy: user.id,
         addedByRole: user.role,
-        addedByFullName: user.fullName,
+        addedByFullName: fullName,
       },
     });
 

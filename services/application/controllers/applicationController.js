@@ -224,7 +224,7 @@ export const updateOnboardingDetails = async (req, res) => {
         if (sponsor.passportCopy) {
           filesToSave.push({
             documentName: `Sponsor ${index + 1} Passport Copy`,
-            documentType: "Passport",
+            documentType: "Sponser Passport",
             linkedTo: application._id,
             linkedModel: "Application",
             fileUrl: sponsor.passportCopy,
@@ -236,7 +236,7 @@ export const updateOnboardingDetails = async (req, res) => {
         if (sponsor.emiratesId) {
           filesToSave.push({
             documentName: `Sponsor ${index + 1} Emirates ID`,
-            documentType: "Emirates ID",
+            documentType: "Sponser Emirates ID",
             linkedTo: application._id,
             linkedModel: "Application",
             fileUrl: sponsor.emiratesId,
@@ -254,7 +254,7 @@ export const updateOnboardingDetails = async (req, res) => {
         if (shareholder.passportCopy) {
           filesToSave.push({
             documentName: `Shareholder ${index + 1} Passport Copy`,
-            documentType: "Passport",
+            documentType: "Shareholder Passport",
             linkedTo: application._id,
             linkedModel: "Application",
             fileUrl: shareholder.passportCopy,
@@ -266,7 +266,7 @@ export const updateOnboardingDetails = async (req, res) => {
         if (shareholder.emiratesId) {
           filesToSave.push({
             documentName: `Shareholder ${index + 1} Emirates ID`,
-            documentType: "Emirates ID",
+            documentType: "Shareholder Emirates ID",
             linkedTo: application._id,
             linkedModel: "Application",
             fileUrl: shareholder.emiratesId,

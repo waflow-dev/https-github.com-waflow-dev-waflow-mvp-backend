@@ -8,6 +8,7 @@ import { logAction } from "../../audit logs/utils/logHelper.js";
 import workflowConfig from "../../application/utils/workflowConfig.js";
 import axios from "axios";
 import mongoose from "mongoose";
+import { getFileSize } from "../../../utils/cloudinary.js";
 
 // ✅ FINAL VERSION — Shared across all controllers
 const calculateApplicationStatus = (steps) => {
@@ -286,10 +287,62 @@ export const getApplicationDocuments = async (req, res) => {
     }
 
     // 🔹 Fetch both application and customer docs
-    const [applicationDocs, customerDocs] = await Promise.all([
+    const [applicationDoc, customerDoc] = await Promise.all([
       Document.find(filterApp).sort({ createdAt: -1 }),
       Document.find(filterCustomer).sort({ createdAt: -1 }),
     ]);
+
+    // 🔹 Add fileSize to each doc
+    const addSizes = async (docs) =>
+      Promise.all(
+        docs.map(async (doc) => {
+          try {
+            const fileInfo = await getFileSize(doc.fileUrl); // assume fileInfo.bytes exists
+            const bytes = fileInfo.bytes || 0;
+
+            let fileSize;
+            if (bytes < 1024 * 1024) {
+              const kb = Math.round(bytes / 1024); // round off
+              fileSize = `${kb} KB`;
+            } else {
+              const mb = Number((bytes / (1024 * 1024)).toFixed(2)); // 2 decimals
+              fileSize = `${mb} MB`;
+            }
+
+            return { ...doc.toObject(), fileSize };
+          } catch (err) {
+            return { ...doc.toObject(), fileSize: "Size unavailable" };
+          }
+        })
+      );
+
+    const [applicationDocs, customerDocs] = await Promise.all([
+      addSizes(applicationDoc),
+      addSizes(customerDoc),
+    ]);
+
+    // 🔹 Compute total size of application docs in bytes
+    const totalBytes = applicationDocs.reduce((acc, d) => {
+      const match = d.fileSize.match(/([\d.]+)\s*(KB|MB)/);
+      if (!match) return acc;
+
+      const value = parseFloat(match[1]);
+      const unit = match[2];
+
+      return acc + (unit === "KB" ? value * 1024 : value * 1024 * 1024);
+    }, 0);
+
+    // 🔹 Convert totalBytes into KB or MB
+    let totalDocumentSize;
+    if (totalBytes === 0) {
+      totalDocumentSize = "0 KB";
+    } else if (totalBytes < 1024 * 1024) {
+      const kb = Math.round(totalBytes / 1024);
+      totalDocumentSize = `${kb} KB`;
+    } else {
+      const mb = Number((totalBytes / (1024 * 1024)).toFixed(2));
+      totalDocumentSize = `${mb} MB`;
+    }
 
     res.status(200).json({
       success: true,
@@ -300,6 +353,7 @@ export const getApplicationDocuments = async (req, res) => {
         customerDocsCount: customerDocs.length,
         totalDocsCount: applicationDocs.length + customerDocs.length,
       },
+      totalDocumentSize,
     });
   } catch (err) {
     res.status(500).json({

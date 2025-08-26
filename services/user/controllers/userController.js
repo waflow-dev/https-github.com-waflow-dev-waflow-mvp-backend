@@ -85,7 +85,7 @@ export const createCustomer = async (req, res) => {
       email,
       "Welcome to Waflow - Set up your account",
       `Your profile has been created. Click the link and login using the credentials provided, to set your password and access your application dashboard.
-      https://waflow-frontend.vercel.app/auth
+      https://waflow-three.vercel.app/auth
       Email : ${email}
       Password : ${password}`
     );
@@ -161,7 +161,7 @@ export const createAgent = async (req, res) => {
       email,
       "You're Invited to Waflow - Set Up Your Agent Account",
       `Your profile has been created. Click the link and login using the credentials provided, to set your password and access your dashboard.
-      https://waflow-frontend.vercel.app/auth
+      https://waflow-three.vercel.app/auth
       Email : ${email}
       Password : ${password}`
     );
@@ -216,7 +216,7 @@ export const createAdmin = async (req, res) => {
       email,
       "You're Invited to Manage Waflow - Activate Your Account",
       `Your profile has been created. Click the link and login using the credentials provided, to set your password and access your dashboard.
-      https://waflow-frontend.vercel.app/auth
+      https://waflow-three.vercel.app/auth
       Email : ${email}
       Password : ${password}`
     );

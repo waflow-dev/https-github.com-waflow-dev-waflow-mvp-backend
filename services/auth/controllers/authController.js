@@ -121,7 +121,7 @@ export const forgotPassword = async (req, res) => {
     if (!user) return res.status(404).json({ message: "User not found" });
 
     const token = generateResetToken(user.userId);
-    const resetUrl = `https://waflow-frontend.vercel.app/reset-password/${token}`;
+    const resetUrl = `https://waflow-three.vercel.app/reset-password/${token}`;
 
     await sendEmail(
       email,

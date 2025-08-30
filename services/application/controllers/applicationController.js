@@ -236,7 +236,7 @@ export const updateOnboardingDetails = async (req, res) => {
         if (sponsor.emiratesId) {
           filesToSave.push({
             documentName: `Sponsor ${index + 1} Emirates ID`,
-            documentType: "Sponser Emirates ID",
+            documentType: "Sponser Emirates",
             linkedTo: application._id,
             linkedModel: "Application",
             fileUrl: sponsor.emiratesId,
@@ -266,7 +266,7 @@ export const updateOnboardingDetails = async (req, res) => {
         if (shareholder.emiratesId) {
           filesToSave.push({
             documentName: `Shareholder ${index + 1} Emirates ID`,
-            documentType: "Shareholder Emirates ID",
+            documentType: "Shareholder Emirates",
             linkedTo: application._id,
             linkedModel: "Application",
             fileUrl: shareholder.emiratesId,
@@ -278,7 +278,7 @@ export const updateOnboardingDetails = async (req, res) => {
         if (shareholder.passportPhoto) {
           filesToSave.push({
             documentName: `Shareholder ${index + 1} Passport Photo`,
-            documentType: "Photo",
+            documentType: "Shareholder Photo",
             linkedTo: application._id,
             linkedModel: "Application",
             fileUrl: shareholder.passportPhoto,
@@ -290,7 +290,7 @@ export const updateOnboardingDetails = async (req, res) => {
         if (shareholder.nocLetter) {
           filesToSave.push({
             documentName: `Shareholder ${index + 1} NOC Letter`,
-            documentType: "NOC",
+            documentType: "Shareholder NOC",
             linkedTo: application._id,
             linkedModel: "Application",
             fileUrl: shareholder.nocLetter,
@@ -693,43 +693,45 @@ export const updateStepStatus = async (req, res) => {
       role: "customer",
     });
 
-    await sendEmail(
-      customerAuth.email,
-      `Update on Your Application Step: ${stepName}`,
-      `The status of “${stepName}” has been updated to ${status}.`
-    );
+    if (status === "Approved" || status === "Rejected") {
+      await sendEmail(
+        customerAuth.email,
+        `Update on Your Application Step: ${stepName}`,
+        `The status of “${stepName}” has been updated to ${status}.`
+      );
 
-    // Create in-app notification for Customer
-    await createNotification({
-      userId: application.customer,
-      userRole: "customer",
-      title: `Step Status Updated: ${stepName}`,
-      message: `The “${stepName}” step in your application is now ${status}.`,
-      type: "application",
-      referenceId: application._id,
-      referenceType: "Application",
-    });
+      // Create in-app notification for Customer
+      await createNotification({
+        userId: application.customer,
+        userRole: "customer",
+        title: `Step Status Updated: ${stepName}`,
+        message: `The “${stepName}” step in your application is now ${status}.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
 
-    // Create in-app notification for Agent
-    await createNotification({
-      userId: application.assignedAgent,
-      userRole: "agent",
-      title: `Step Status Updated: ${stepName}`,
-      message: `The “${stepName}” step in your application is now ${status}.`,
-      type: "application",
-      referenceId: application._id,
-      referenceType: "Application",
-    });
+      // Create in-app notification for Agent
+      await createNotification({
+        userId: application.assignedAgent,
+        userRole: "agent",
+        title: `Step Status Updated: ${stepName}`,
+        message: `The “${stepName}” step in your application is now ${status}.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
 
-    // Create in-app notification for Admin
-    await createNotification({
-      userRole: "admin",
-      title: `Step Status Updated: ${stepName}`,
-      message: `The “${stepName}” step in your application is now ${status}.`,
-      type: "application",
-      referenceId: application._id,
-      referenceType: "Application",
-    });
+      // Create in-app notification for Admin
+      await createNotification({
+        userRole: "admin",
+        title: `Step Status Updated: ${stepName}`,
+        message: `The “${stepName}” step in your application is now ${status}.`,
+        type: "application",
+        referenceId: application._id,
+        referenceType: "Application",
+      });
+    }
 
     // If Application is completed
     if (application.status == "Completed") {

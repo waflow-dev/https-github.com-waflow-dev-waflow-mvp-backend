@@ -83,11 +83,15 @@ export const createCustomer = async (req, res) => {
     // send welcome email to customer
     await sendEmail(
       email,
-      "Welcome to Waflow - Set up your account",
-      `Your profile has been created. Click the link and login using the credentials provided, to set your password and access your application dashboard.
+      " Welcome to Waflow – Activate Your Account and Get Started",
+      `Dear ${firstName},
+      Welcome to Waflow! We’re delighted to have you on board. Your profile has been successfully created, giving you access to a secure portal where all your application details will be managed in one place.
+      To get started, please click the link below to set your password and activate your account. Once logged in, you’ll have full visibility of your application dashboard, documents, and progress updates.
       https://waflow-three.vercel.app/auth
       Email : ${email}
-      Password : ${password}`
+      Password : ${password}
+      We encourage you to set up your account at the earliest so that you can begin your onboarding smoothly. Should you have any questions, our support team is always here to guide you.
+      Warm regards, The Waflow Team`
     );
 
     // send notification email to agent

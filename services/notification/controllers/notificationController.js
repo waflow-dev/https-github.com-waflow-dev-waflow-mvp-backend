@@ -1,4 +1,5 @@
 import Notification from "../models/notificationModel.js";
+import mongoose from "mongoose";
 
 // 🆕 Get All Notifications with unread count and pagination
 export const getAllNotificationsForUser = async (req, res) => {
@@ -166,16 +167,38 @@ export const markAsRead = async (req, res) => {
 // 3. Clear all notifications (mark all as Read)
 export const clearAllNotifications = async (req, res) => {
   try {
-    const userId = req.user.id;
+    const { id: UserId, role: UserRole } = req.user;
+    console.log("Clearing notifications for:", UserRole, UserId);
 
-    await Notification.updateMany(
-      { userId, status: "Unread" },
-      { $set: { status: "Read", readAt: new Date() } }
-    );
+    let filter = {};
 
-    res
-      .status(200)
-      .json({ success: true, message: "All notifications marked as read" });
+    if (UserRole === "admin") {
+      // Admin notifications are not tied to userId
+      filter = { userRole: "admin", status: "Unread" };
+    } else {
+      // Agent or Customer
+      filter = {
+        userId: new mongoose.Types.ObjectId(UserId),
+        userRole: UserRole,
+        status: "Unread",
+      };
+    }
+
+    const result = await Notification.updateMany(filter, {
+      $set: { status: "Read", readAt: new Date() },
+    });
+
+    if (result.matchedCount === 0) {
+      return res.status(404).json({
+        success: false,
+        message: "No unread notifications found",
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: `${result.modifiedCount} notifications marked as read`,
+    });
   } catch (err) {
     res.status(500).json({
       success: false,

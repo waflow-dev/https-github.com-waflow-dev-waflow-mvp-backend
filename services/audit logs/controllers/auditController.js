@@ -5,6 +5,9 @@ const isValidObjectId = (id) =>
   mongoose.Types.ObjectId.isValid(id) &&
   String(new mongoose.Types.ObjectId(id)) === id;
 
+// Direct service function for internal use (no HTTP req/res)
+
+
 export const createLog = async (req, res) => {
   try {
     const data = { ...req.body };

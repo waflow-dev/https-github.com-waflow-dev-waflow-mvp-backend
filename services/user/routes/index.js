@@ -11,6 +11,9 @@ import {
   getAgentDetails,
   getAdminDetails,
   getAllCustomers,
+  getAllAgents,
+  updateAgent,
+  updateCustomer,
 } from "../controllers/userController.js";
 
 const router = express.Router();
@@ -21,27 +24,30 @@ router.post(
   authorizeRoles("admin"),
   createAgent
 );
+
 router.post(
   "/create-customer",
   authenticateToken,
   authorizeRoles("admin", "agent"),
   createCustomer
 );
+
 router.post("/create-admin", createAdmin);
 
 router.get(
-  "/customer/profile",
-  (req, res, next) => { console.log("[DEBUG] /customer/profile route hit"); next(); },
+  "/customer/:customerId",
   authenticateToken,
- 
+  authorizeRoles("agent", "admin", "customer"),
   getCustomerDetails
 );
+
 router.get(
-  "/agent/profile",
+  "/agents/:agentId",
   authenticateToken,
-  authorizeRoles("agent"),
+  authorizeRoles("admin", "agent", "customer"),
   getAgentDetails
 );
+
 router.get(
   "/admin/profile",
   authenticateToken,
@@ -52,7 +58,24 @@ router.get(
 router.get(
   "/customers",
   authenticateToken,
+  authorizeRoles("admin", "agent"),
   getAllCustomers
+);
+
+router.get("/agents", authenticateToken, authorizeRoles("admin"), getAllAgents);
+
+router.put(
+  "/agent/:agentId",
+  authenticateToken,
+  authorizeRoles("admin"),
+  updateAgent
+);
+
+router.put(
+  "/customer/:customerId",
+  authenticateToken,
+  authorizeRoles("admin", "agent", "customer"),
+  updateCustomer
 );
 
 export default router;

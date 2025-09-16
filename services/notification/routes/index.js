@@ -1,8 +1,21 @@
 import express from "express";
-import { sendGeneralEmail } from "../controllers/emailController.js";
+import {
+  getUnreadNotifications,
+  markAsRead,
+  clearAllNotifications,
+  getCustomerNotifications,
+  getAgentNotifications,
+  getAdminNotifications,
+} from "../controllers/notificationController.js";
+import { authenticateToken } from "../../../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-router.post("/send", sendGeneralEmail);
+router.get("/customer/:customerId", getCustomerNotifications);
+router.get("/agent/:agentId", getAgentNotifications);
+router.get("/admin", getAdminNotifications);
+router.get("/", authenticateToken, getUnreadNotifications);
+router.patch("/read/:id", markAsRead);
+router.patch("/clear-all", authenticateToken, clearAllNotifications);
 
 export default router;

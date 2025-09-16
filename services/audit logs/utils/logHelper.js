@@ -8,7 +8,10 @@ export const logAction = async ({
   details = {},
 }) => {
   try {
-    await axios.post(`${process.env.AUDIT_LOG_URL}/api/audit/log`, {
+    // For server-to-server communication, use the same server
+    const baseUrl =
+      process.env.BASE_URL || `http://localhost:${process.env.PORT || 5000}`;
+    await axios.post(`${baseUrl}/api/audit/log`, {
       type,
       action,
       performedBy,

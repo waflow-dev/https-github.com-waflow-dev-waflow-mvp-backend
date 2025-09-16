@@ -5,23 +5,18 @@ import {
   createApplication,
   updateStepStatus,
   addNote,
-  updateVisaSubStep,
-  addVisaMember,
-  reviewApplication,
   updateOnboardingDetails,
   getApplicationById,
-  getAllApplications
+  getAllApplications,
+  getApplicationsByCustomerId,
+  // reviewApplicationAfterOnboarding,
+  updateApplication,
+  lockOrUnlockApplication,
+  showApplicationWithDoucuments,
+  finalOnboarding,
 } from "../controllers/applicationController.js";
 
 const router = express.Router();
-
-// Get all applications — allowed for agent/admin
-router.get(
-  "/",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  getAllApplications
-);
 
 // Create a new application — allowed for agent/admin
 router.post(
@@ -31,54 +26,85 @@ router.post(
   createApplication
 );
 
-// Update workflow step status — agent/admin
-router.patch(
-  "/step/:appId",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  updateStepStatus
-);
-
-// Add note for clarification — agent/admin
-router.post(
-  "/note/:appId",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  addNote
-);
-
-// Update visa substep status — agent/admin
-router.patch(
-  "/visa-substep/:appId/:memberId",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  updateVisaSubStep
-);
-
-// Add visa applicant — agent/admin
-router.post(
-  "/visa-member/:appId",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  addVisaMember
-);
-
-// Review application — agent/admin
-router.post(
-  "/review/:applicationId",
-  authenticateToken,
-  authorizeRoles("agent", "admin"),
-  reviewApplication
-);
-
 // Update Onboarding Details - customer
 router.put(
-  "/onboarding/:customerId",
+  "/onboarding/:applicationId",
   authenticateToken,
   authorizeRoles("customer"),
   updateOnboardingDetails
 );
 
-router.get("/:appId", authenticateToken, getApplicationById);
+router.post(
+  "/finalOnboarding",
+  authenticateToken,
+  authorizeRoles("customer"),
+  finalOnboarding
+);
+
+router.patch(
+  "/customer/:applicationId",
+  authenticateToken,
+  authorizeRoles("admin", "agent"),
+  updateApplication
+);
+
+// router.patch(
+//   "/review-after-onboarding/:applicationId",
+//   authenticateToken,
+//   authorizeRoles("agent", "admin"),
+//   reviewApplicationAfterOnboarding
+// );
+
+// Update application step status — agent/admin
+router.patch(
+  "/step-status/:applicationId",
+  authenticateToken,
+  authorizeRoles("agent", "admin"),
+  updateStepStatus
+);
+
+router.patch(
+  "/:applicationId/lock",
+  authenticateToken,
+  authorizeRoles("admin", "agent"),
+  lockOrUnlockApplication
+);
+
+// Add note for clarification
+router.post(
+  "/note/:applicationId",
+  authenticateToken,
+  authorizeRoles("agent", "customer", "admin"),
+  addNote
+);
+
+router.get(
+  "/:appId",
+  authenticateToken,
+  authorizeRoles("agent", "customer", "admin"),
+  getApplicationById
+);
+
+router.get(
+  "/app/:customerId",
+  authenticateToken,
+  authorizeRoles("agent", "customer", "admin"),
+  getApplicationsByCustomerId
+);
+
+// Get all applications — allowed for agent/admin
+router.get(
+  "/",
+  authenticateToken,
+  authorizeRoles("agent", "admin"),
+  getAllApplications
+);
+
+router.get(
+  "/status/:appId",
+  authenticateToken,
+  authorizeRoles("agent", "customer", "admin"),
+  showApplicationWithDoucuments
+);
 
 export default router;

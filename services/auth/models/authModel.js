@@ -11,6 +11,8 @@ const authSchema = new mongoose.Schema(
       type: String,
       required: true,
       unique: true,
+      lowercase: true,
+      trim: true,
     },
     passwordHash: {
       type: String,
@@ -22,6 +24,10 @@ const authSchema = new mongoose.Schema(
       enum: ["admin", "agent", "customer"],
     },
     isActive: {
+      type: Boolean,
+      default: true,
+    },
+    isTempPassword: {
       type: Boolean,
       default: true,
     },

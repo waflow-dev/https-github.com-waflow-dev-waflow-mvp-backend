@@ -352,8 +352,12 @@ export const finalOnboarding = async (req, res) => {
     // Send email notification to agent
     await sendEmail(
       agentAuth.email,
-      `New Application Submitted by ${req.user.firstName}`,
-      `A new application has been submitted. Please review and begin processing.`
+      ` New Application Submitted - ${req.user.firstName}`,
+      `Dear Team, 	
+       This is to notify you that ${req.user.firstName} has successfully submitted a new application through the Waflow portal. The application is now available in your dashboard.
+       We request you to review the submitted details promptly and initiate the processing workflow. Ensuring timely action will help us deliver a seamless and professional experience for the customer.
+       For any clarification, you may use the notes section within the portal. Please acknowledge the submission by updating the application status after your initial review.
+       Thank you for your continued diligence. Waflow System Notification`
     );
 
     // Send email notification to customer
